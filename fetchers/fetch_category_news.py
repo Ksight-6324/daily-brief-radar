@@ -10,8 +10,10 @@
 
 运行前需要先装：pip install feedparser requests
 """
+import calendar
 import json
 import re
+import time
 from datetime import datetime
 
 import feedparser
@@ -27,11 +29,21 @@ CATEGORY_SOURCES = {
     # ===== 原有类别（保持不变） =====
     "经济": {
         "中国经济": "https://www.chinanews.com.cn/rss/finance.xml",
-        "世界经济": "http://feeds.bbci.co.uk/news/business/rss.xml",
+        "世界经济": {
+            "BBC商业": "http://feeds.bbci.co.uk/news/business/rss.xml",
+            "The Guardian商业": "https://www.theguardian.com/business/rss",
+            "纽约时报商业": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        },
     },
     "政治": {
         "国内时政": "https://www.chinanews.com.cn/rss/china.xml",
-        "国际时政": "http://feeds.bbci.co.uk/news/world/rss.xml",
+        "国际时政": {
+            "BBC": "http://feeds.bbci.co.uk/news/world/rss.xml",
+            "The Guardian": "https://www.theguardian.com/world/rss",
+            "纽约时报": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+            "半岛电视台": "https://www.aljazeera.com/xml/rss/all.xml",
+            "德国之声": "https://rss.dw.com/rdf/rss-en-all",
+        },
     },
     "科学突破": {
         "科学突破": "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
@@ -95,7 +107,6 @@ CATEGORY_SOURCES = {
         },
         "政策走向": {
             "新华网": "http://www.news.cn/politics/news_politics.xml",
-            "人民网": "http://www.people.com.cn/rss/politics.xml",
             "中新网财经": "https://www.chinanews.com.cn/rss/finance.xml",
         },
     },
@@ -116,6 +127,35 @@ CATEGORY_SOURCES = {
             "华丽志": "https://luxe.co/feed",
         },
     },
+    "电影": {
+        "电影": {
+            "Variety": "https://variety.com/feed/",
+            "Deadline": "https://deadline.com/feed/",
+            "IndieWire": "https://www.indiewire.com/feed/",
+            "The Film Stage": "https://thefilmstage.com/feed/",
+            "Little White Lies": "https://lwlies.com/feed/",
+            "SlashFilm": "https://www.slashfilm.com/feed/",
+        },
+    },
+    "音乐": {
+        "音乐": {
+            "Pitchfork新闻": "https://pitchfork.com/feed/feed-news/rss",
+            "Pitchfork专辑评论": "https://pitchfork.com/feed/feed-album-reviews/rss",
+            "Stereogum": "https://www.stereogum.com/feed/",
+            "Consequence": "https://consequence.net/feed/",
+            "NME": "https://www.nme.com/feed",
+            "The Quietus": "https://thequietus.com/feed",
+        },
+    },
+    "艺术": {
+        "美术": {
+            "Artnet": "https://news.artnet.com/feed",
+            "Hyperallergic": "https://hyperallergic.com/feed/",
+            "ARTnews": "https://www.artnews.com/feed/",
+            "Artforum": "https://www.artforum.com/feed/",
+            "Colossal": "https://www.thisiscolossal.com/feed/",
+        },
+    },
     "AI公司": {
         "AI公司动态": {
             "OpenAI": "https://openai.com/news/rss.xml",
@@ -128,6 +168,11 @@ CATEGORY_SOURCES = {
         },
     },
 }
+
+# 时效过滤：只保留最近多少小时内发布的新闻（简报的定位是"这半天内值得关注的事"）。
+# 艺术/设计/音乐/电影更新慢一些，放宽到 72 小时；没有发布时间的条目保留。
+DEFAULT_MAX_AGE_HOURS = 48
+MAX_AGE_HOURS = {"艺术": 72, "设计": 72, "音乐": 72, "电影": 72, "游戏": 72}
 
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; daily-brief-radar/1.0)"}
@@ -161,8 +206,16 @@ def fetch_one(category, subcategory, url, source_name=None, max_items=10):
         print(f"⚠️ 【{label}】抓取可能有问题，跳过（{url}）")
         return []
 
+    max_age = MAX_AGE_HOURS.get(category, DEFAULT_MAX_AGE_HOURS) * 3600
+    now_ts = time.time()
+
     results = []
-    for entry in feed.entries[:max_items]:
+    for entry in feed.entries:
+        if len(results) >= max_items:
+            break
+        parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+        if parsed and now_ts - calendar.timegm(parsed) > max_age:
+            continue  # 太旧了
         item = {
             "category": category,
             "subcategory": subcategory,

@@ -34,6 +34,10 @@ import urllib.parse
 import requests
 from datetime import datetime
 
+# 同目录下的模块（python core/summarize.py 运行时，core/ 会自动在导入路径里）
+import learning
+import youtube_digest
+
 # ============ DeepSeek API Key：从环境变量读取（GitHub Secrets 里配置） ============
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 # ==========================================================
@@ -42,8 +46,8 @@ DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
 SCIENCE_TOP_N = 2
 TECH_TOP_N = 6
-ECONOMY_SUB_N = 1
-POLITICS_SUB_N = 1
+ECONOMY_SUB_N = 2
+POLITICS_SUB_N = 2
 
 NO_RHETORIC_RULE = "语言要求：绝对不要使用任何比喻、拟人、排比等修辞手法，不要写“就像”“仿佛”这类词，直接大白话说清楚事实就行，越直白越好。"
 
@@ -520,6 +524,7 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
 供你参考，不要写进标题）。请你：
 1. 严格挑出其中最值得关注、影响力最大的 {top_n} 条，不要超过这个数量
 2. 如果不是简体中文（英文、意大利文、繁体中文等），翻译成简体中文
+全局规则：花边新闻（明星八卦、恋情绯闻、婚变、红毯穿搭、生活琐事、争吵骂战）一律不要选，只选有实质内容的新闻。
 {extra_rule}
 {seen_block}
 {NO_JARGON_RULE}
@@ -633,6 +638,21 @@ NEW_SECTIONS = [
          "领导人活动报道、口号式宣传稿、纯文化稿件不要选\n"
          "4. 一句话点评要点出：这个政策实际影响谁、有什么变化"),
     ]),
+    ("film", "电影", [
+        ("电影", 3,
+         "3. 只挑电影本身的新闻：新片上映或定档、预告片、电影节与奖项、票房、重要导演和作品的动态、口碑评价。"
+         "明星八卦、感情生活、红毯穿搭、绯闻、演员私生活一律不要选"),
+    ]),
+    ("music", "音乐", [
+        ("音乐", 3,
+         "3. 只挑音乐本身的新闻：新专辑的发布或宣布、重要单曲、高分或有代表性的专辑评论、巡演、音乐奖项、"
+         "重要音乐人的作品与逝世。明星八卦、恋情、绯闻、争吵、穿搭一律不要选"),
+    ]),
+    ("art", "艺术", [
+        ("美术", 3,
+         "3. 只挑美术与艺术本身的新闻：重要展览、美术馆与博物馆动态、艺术家的作品与访谈、重要拍卖与艺术奖项、"
+         "文物与艺术史的新发现。八卦和纯商业炒作不要选"),
+    ]),
     ("jobs", "招聘", [
         ("大公司招聘动态", 3,
          "3. 只挑跟大公司招聘有关的新闻：校招/社招启动、扩招或缩招、裁员、薪资与岗位趋势、招聘要求变化。"
@@ -646,9 +666,13 @@ NEW_SECTIONS = [
     ]),
 ]
 
+# 不是"新闻候选里挑几条"、而是单独生成的板块：YouTube 频道更新、每日一学（历史/诗词/艺术风格）
+SPECIAL_SECTION_KEYS = ["youtube", "history", "poem", "style"]
+
 ALL_SECTION_KEYS = ["overview", "jwc", "top_picks", "tech",
                     "economy", "politics", "science",
                     *[k for k, _, _ in NEW_SECTIONS],
+                    *SPECIAL_SECTION_KEYS,
                     "action", "greeting"]
 
 
@@ -710,7 +734,8 @@ def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, po
 
 
 def summarize_overview(jwc_text, tech_text):
-    prompt = f"""下面是今天的教务网通知摘要和科技资讯摘要，请你写一段"今日总览"，格式严格如下：
+    prompt = f"""下面是今天简报各板块的摘要（科技、国际政治、经济、股市、文化艺术等，内容来自全世界），
+请你写一段"今日总览"，概括这半天里全世界最值得关注的事，格式严格如下：
 
 【今日一句话】
 用抽象但有信息量的方式概括今天的主题/趋势，不超过25字。要求：
@@ -720,7 +745,7 @@ def summarize_overview(jwc_text, tech_text):
   可以带1个简短例子帮助理解，但不要在这一句话里展开讲例子的细节
 
 【AI观察】
-1-2句话，讲清楚今天科技资讯里出现了哪类趋势/共同点，直接说事实和判断
+2-3句话，讲清楚今天各板块里最重要的两三件事，以及它们之间有没有共同点（比如政治和经济的联动、科技和文化的呼应），直接说事实和判断
 
 【趋势预测】
 1-2句话，基于今天的信息，往前展望一步：接下来可能会怎样发展。
@@ -735,7 +760,7 @@ def summarize_overview(jwc_text, tech_text):
 教务网摘要：
 {jwc_text}
 
-科技资讯摘要：
+各板块摘要：
 {tech_text}
 """
     return call_deepseek(prompt)
@@ -852,11 +877,43 @@ if __name__ == "__main__":
                     print(result + "\n")
             sections[key] = "\n".join(parts)
 
-    # 其他板块的文字，给总览/行动建议参考
+    # ---------- YouTube 频道更新 ----------
+    yt_data = load_json("youtube.json")
+    if yt_data:
+        seen_ts = {}
+        for r in seen_records:
+            try:
+                seen_ts[r["url"]] = datetime.fromisoformat(r["ts"])
+            except Exception:
+                pass
+        try:
+            sections["youtube"] = youtube_digest.build_youtube_section(call_deepseek, yt_data, seen_ts, now)
+        except Exception as e:
+            print(f"⚠️ YouTube 板块生成失败，跳过：{e}")
+        if sections.get("youtube"):
+            print(sections["youtube"] + "\n")
+
+    # ---------- 每日一学：历史上的今天 / 诗词 / 艺术风格 ----------
+    for key, builder, label in (("history", learning.build_history, "历史上的今天"),
+                                ("poem", learning.build_poem, "每日诗词"),
+                                ("style", learning.build_style, "艺术风格小课")):
+        print(f"正在生成【{label}】...")
+        try:
+            sections[key] = builder(call_deepseek, now, slot, seen_urls)
+        except Exception as e:
+            print(f"  ⚠️ 【{label}】生成失败，跳过：{e}")
+            continue
+        if sections.get(key):
+            print(sections[key] + "\n")
+
+    # 其他板块的文字，给行动建议参考（YouTube 和每日一学不放进去，行动建议只基于新闻）
     extra_text = "\n\n".join(
         f"【{key}】\n{sections[key]}" for key, _, _ in NEW_SECTIONS if sections.get(key)
     )
-    tech_for_overview = "\n".join(x for x in (sections.get("tech"), sections.get("ai_news")) if x) or "无"
+    # 总览要覆盖"这半天内全世界值得关注的事"：把各新闻板块的内容合在一起给 AI 归纳
+    overview_keys = ("tech", "ai_news", "politics", "economy", "china", "europe", "stocks",
+                     "film", "music", "art", "design", "games", "science")
+    tech_for_overview = "\n".join(sections[k] for k in overview_keys if sections.get(k)) or "无"
     has_content = any(sections.get(k) for k in ALL_SECTION_KEYS if k not in ("overview", "action", "greeting"))
 
     if has_content:

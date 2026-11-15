@@ -18,6 +18,7 @@ FETCH_STEPS = [
     ("抓取 Hacker News", "fetchers/fetch_hacker_news.py"),
     ("抓取科技/AI媒体RSS", "fetchers/fetch_rss_sources.py"),
     ("抓取经济/政治/科学突破新闻", "fetchers/fetch_category_news.py"),
+    ("抓取 YouTube 频道更新", "fetchers/fetch_youtube.py"),
 ]
 
 steps = FETCH_STEPS + [

@@ -12,6 +12,7 @@
 import os
 import re
 import smtplib
+from html import escape as esc
 from email.mime.text import MIMEText
 from email.header import Header
 
@@ -31,23 +32,32 @@ COLOR_MUTED = "#8a95a3"
 COLOR_BG_ACCENT = "#eaf0f5"
 COLOR_BG_MUTED = "#f4f5f6"
 
+MAX_EMAIL_KB = 95  # 单封邮件大小上限，超过就拆成两封（Gmail 约 102KB 会截断）
+
 # 简报时段（由 summarize.py 按罗马时间判断后写入 daily_brief.md）
 SLOT_GREETING = {"noon": "午安", "evening": "晚上好", "morning": "早安"}
 SLOT_TAG = {"noon": "午报", "evening": "晚报", "morning": "早报"}
 
 # 邮件里"科技资讯全览"之后依次显示的板块：(daily_brief.md 里的 key, 邮件标题)
 EXTRA_SECTIONS = [
-    ("ai_news", "🤖 AI公司动态"),
-    ("stocks", "📈 美股 · 港股 · 财报"),
-    ("games", "🎮 3A游戏与游戏公司"),
-    ("design", "🎨 设计"),
-    ("europe", "🇪🇺 欧盟 · 意大利"),
+    ("politics", "🏛 政治（国内 · 国际）"),
+    ("economy", "💰 经济（中国 · 世界）"),
     ("china", "🇨🇳 国内要闻与政策"),
-    ("jobs", "💼 大公司招聘动态"),
+    ("europe", "🇪🇺 欧盟 · 意大利"),
+    ("stocks", "📈 美股 · 港股 · 财报"),
+    ("ai_news", "🤖 AI公司动态"),
+    ("music", "🎵 音乐与新专辑"),
+    ("film", "🎬 电影"),
+    ("art", "🖼 美术与展览"),
+    ("design", "🎨 设计"),
+    ("games", "🎮 3A游戏与游戏公司"),
     ("fashion", "👗 时尚品牌"),
-    ("economy", "💰 经济"),
-    ("politics", "🏛 政治"),
+    ("jobs", "💼 大公司招聘动态"),
     ("science", "🔬 科学突破"),
+    ("youtube", "▶️ 关注的频道更新"),
+    ("history", "🏺 历史上的今天"),
+    ("poem", "📜 每日诗词"),
+    ("style", "🖌 艺术风格小课"),
 ]
 
 _LEADING_MARKER_RE = re.compile(r"^[\s\-\*•·]*(\d+[\.\、\)]\s+)?")
@@ -211,6 +221,106 @@ def render_content_cards(text):
     return html
 
 
+def render_youtube_cards(text):
+    """频道|||标题|||链接|||新作/往期|||依据|||概括"""
+    html = ""
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = _split_line(line, 6)
+        if not parts or not parts[1]:
+            continue
+        channel, title, url, kind, basis, summary = [esc(p) for p in parts[:6]]
+        kind_color = COLOR_ACCENT if kind == "新作" else COLOR_MUTED
+        basis_note = "依据：字幕" if basis == "字幕" else "依据：仅标题和简介，概括较粗略"
+        title_html = f'<a href="{url}" style="color:#222; text-decoration:none; border-bottom:1px dotted #222;">{title}</a>' if url else title
+        html += f'''<div style="background:{COLOR_BG_MUTED}; border-radius:6px; padding:16px 18px; margin-bottom:12px;">
+            <div style="font-size:16.5px; font-weight:600; color:#222;">
+                <span style="display:inline-block; background:{COLOR_ACCENT}; color:#fff; font-size:12px; padding:3px 10px; border-radius:10px; margin-right:6px; vertical-align:2px;">{channel}</span>
+                <span style="display:inline-block; background:{kind_color}; color:#fff; font-size:12px; padding:3px 8px; border-radius:10px; margin-right:6px; vertical-align:2px;">{kind}</span>{title_html}</div>
+            <div style="font-size:14.5px; color:#555; margin-top:8px; line-height:1.6;">{summary}</div>
+            <div style="font-size:12.5px; color:#999; margin-top:6px;">{basis_note}</div>
+        </div>'''
+    return html
+
+
+def render_history_cards(text):
+    """维基百科|||标题|||链接|||年份|||解读|||为什么值得知道"""
+    html = ""
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = _split_line(line, 6)
+        if not parts or not parts[1]:
+            continue
+        _, title, url, year, explain, why = [esc(p) for p in parts[:6]]
+        title_html = f'<a href="{url}" style="color:#222; text-decoration:none; border-bottom:1px dotted #222;">{title}</a>' if url else title
+        html += f'''<div style="background:{COLOR_BG_MUTED}; border-radius:6px; padding:16px 18px; margin-bottom:12px;">
+            <div style="font-size:16.5px; font-weight:600; color:#222;">
+                <span style="display:inline-block; background:{COLOR_ACCENT}; color:#fff; font-size:12px; padding:3px 10px; border-radius:10px; margin-right:6px; vertical-align:2px;">{year}</span>{title_html}</div>
+            <div style="font-size:14.5px; color:#555; margin-top:8px; line-height:1.6;">{explain}</div>
+            <div style="font-size:13.5px; color:#888; margin-top:8px; line-height:1.6;">💬 {why}</div>
+        </div>'''
+    return html
+
+
+def render_poem_card(text):
+    """标题|||作者·朝代|||原文（句子用 / 分隔）|||赏析|||背景"""
+    html = ""
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = _split_line(line, 5)
+        if not parts or not parts[0] or not parts[2]:
+            continue
+        title, author, body, appreciation, background = [esc(p) for p in parts[:5]]
+        body_html = "<br>".join(s.strip() for s in body.split(" / ") if s.strip())
+        html += f'''<div style="background:#fff; border:1px solid {COLOR_ACCENT}; border-radius:6px; padding:18px 20px; margin-bottom:12px;">
+            <div style="text-align:center; font-size:18px; font-weight:600; color:{COLOR_DARK};">《{title}》</div>
+            <div style="text-align:center; font-size:13px; color:{COLOR_MUTED}; margin-top:2px;">{author}</div>
+            <div style="text-align:center; font-family:'Songti SC','SimSun',serif; font-size:16px; color:#222; line-height:1.9; margin:12px 0;">{body_html}</div>
+            <div style="font-size:14.5px; color:#555; line-height:1.6;"><b style="color:{COLOR_ACCENT};">赏析：</b>{appreciation}</div>
+            <div style="font-size:13.5px; color:#888; margin-top:6px; line-height:1.6;">📖 {background}</div>
+        </div>'''
+    return html
+
+
+def render_style_card(text):
+    """维基百科|||风格名|||链接|||起源|||特征|||代表|||练习"""
+    html = ""
+    for raw_line in text.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = _split_line(line, 7)
+        if not parts or not parts[1]:
+            continue
+        _, name, url, origin, features, reps, practice = [esc(p) for p in parts[:7]]
+        name_html = f'<a href="{url}" style="color:#222; text-decoration:none; border-bottom:1px dotted #222;">{name}</a>' if url else name
+        feats = "".join(f'<li style="margin-bottom:3px;">{f.strip()}</li>' for f in features.split("；") if f.strip())
+        html += f'''<div style="background:{COLOR_BG_MUTED}; border-radius:6px; padding:16px 18px; margin-bottom:12px;">
+            <div style="font-size:17px; font-weight:600; color:#222;">{name_html}</div>
+            <div style="font-size:14px; color:#666; margin-top:6px; line-height:1.6;"><b style="color:{COLOR_ACCENT};">起源：</b>{origin}</div>
+            <div style="font-size:14px; color:#666; margin-top:6px;"><b style="color:{COLOR_ACCENT};">核心特征：</b></div>
+            <ul style="font-size:14px; color:#555; margin:4px 0 0 18px; padding:0; line-height:1.6;">{feats}</ul>
+            <div style="font-size:14px; color:#666; margin-top:6px; line-height:1.6;"><b style="color:{COLOR_ACCENT};">代表：</b>{reps}</div>
+            <div style="font-size:14px; color:#333; margin-top:8px; line-height:1.6; background:{COLOR_BG_ACCENT}; padding:8px 10px; border-radius:4px;"><b style="color:{COLOR_ACCENT};">今天的小练习：</b>{practice}</div>
+        </div>'''
+    return html
+
+
+# 特殊板块用各自的版式，其余用通用的六段式卡片
+SECTION_RENDERERS = {
+    "youtube": render_youtube_cards,
+    "history": render_history_cards,
+    "poem": render_poem_card,
+    "style": render_style_card,
+}
+
+
 def render_action_advice(text):
     directions, not_worth, recommend = [], "", ""
     mode = None
@@ -286,7 +396,11 @@ def render_greeting(text):
     return opening, closing
 
 
-def build_html(date, slot, sections):
+def build_html(date, slot, sections, extra_keys=None, continuation=False):
+    """extra_keys：只渲染这些扩展板块（None=全部）；continuation=True：生成"续篇"邮件，只含扩展板块，
+    用于内容太多、一封装不下（Gmail 超过约 102KB 会截断）时拆成两封。"""
+    if extra_keys is None:
+        extra_keys = [k for k, _ in EXTRA_SECTIONS]
     overview_html, todo = render_overview(sections["overview"])
     jwc_html = render_jwc_cards(sections["jwc"])
     top_picks_html = render_top_picks(sections["top_picks"])
@@ -294,12 +408,23 @@ def build_html(date, slot, sections):
 
     extra_sections_html = ""
     for key, title in EXTRA_SECTIONS:
-        content = render_content_cards(sections.get(key, ""))
+        if key not in extra_keys:
+            continue
+        content = SECTION_RENDERERS.get(key, render_content_cards)(sections.get(key, ""))
         if content:
             extra_sections_html += f'''
             <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:26px;">{title}</h2>
             {content}
             '''
+
+    if continuation:
+        return f"""
+    <div style="max-width:620px; margin:0 auto; font-family:-apple-system,'PingFang SC',sans-serif;">
+        <h1 style="font-size:23px; color:{COLOR_DARK}; margin-bottom:6px;">📋 每日简报（续）</h1>
+        <div style="font-size:15px; color:{COLOR_MUTED}; margin-bottom:8px;">{date} · 内容较多，后半部分在这一封</div>
+        {extra_sections_html}
+    </div>
+    """
 
     action_html = render_action_advice(sections.get("action", ""))
     opening, closing = render_greeting(sections.get("greeting", ""))
@@ -363,13 +488,26 @@ def send_brief_email():
         raise RuntimeError("daily_brief.md 不存在") from e
 
     date, slot, sections = parse_brief(content)
-    html_content = build_html(date, slot, sections)
-
     slot_tag = SLOT_TAG.get(slot, "简报")
-    msg = MIMEText(html_content, "html", "utf-8")
-    msg["From"] = QQ_EMAIL
-    msg["To"] = SEND_TO
-    msg["Subject"] = Header(f"每日简报·{slot_tag} {date}", "utf-8")
+
+    # 压缩缩进和换行；Gmail 遇到超过约 102KB 的邮件会截断，所以超过 MAX_EMAIL_KB 就拆成两封
+    def mini(html):
+        return re.sub(r"\n\s*", "", html)
+
+    all_keys = [k for k, _ in EXTRA_SECTIONS]
+    full = mini(build_html(date, slot, sections))
+    print(f"邮件大小：{len(full.encode('utf-8')) / 1024:.1f} KB（上限 {MAX_EMAIL_KB} KB）")
+    emails = [(f"每日简报·{slot_tag} {date}", full)]
+    if len(full.encode("utf-8")) > MAX_EMAIL_KB * 1024:
+        # 从多到少尝试：第一封放尽可能多的板块，剩下的放进第二封
+        for k in range(len(all_keys) - 1, 0, -1):
+            part1 = mini(build_html(date, slot, sections, extra_keys=all_keys[:k]))
+            if len(part1.encode("utf-8")) <= MAX_EMAIL_KB * 1024 or k == 1:
+                part2 = mini(build_html(date, slot, sections, extra_keys=all_keys[k:], continuation=True))
+                emails = [(f"每日简报·{slot_tag} {date}（1/2）", part1),
+                          (f"每日简报·{slot_tag} {date}（2/2）", part2)]
+                print(f"内容较多，拆成两封发送：{len(part1.encode('utf-8')) / 1024:.1f} KB + {len(part2.encode('utf-8')) / 1024:.1f} KB")
+                break
 
     try:
         if SMTP_PORT == 465:
@@ -379,7 +517,12 @@ def send_brief_email():
             server.starttls()
         with server:
             server.login(QQ_EMAIL, QQ_AUTH_CODE)
-            server.sendmail(QQ_EMAIL, [SEND_TO], msg.as_string())
+            for subject, html_content in emails:
+                msg = MIMEText(html_content, "html", "utf-8")
+                msg["From"] = QQ_EMAIL
+                msg["To"] = SEND_TO
+                msg["Subject"] = Header(subject, "utf-8")
+                server.sendmail(QQ_EMAIL, [SEND_TO], msg.as_string())
 
         print(f"✅ 简报已发送到 {SEND_TO}")
 
