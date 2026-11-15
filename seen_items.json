@@ -1,0 +1,349 @@
+{
+ "items": [
+  {
+   "url": "https://github.com/dream-num/univer",
+   "title": "Univer：用开源SDK搭建你自己的AI办公套件",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://jakub.jankiewicz.org/blog/ai-code-open-source/",
+   "title": "所有AI生成的代码都应开源",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://techcrunch.com/2026/11/14/the-ai-graveyard-a-running-list-of-projects-and-startups-that-didnt-make-it/",
+   "title": "AI墓地：一份没能活下来的项目和创业公司清单",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.theverge.com/ai-artificial-intelligence/1033984/congress-export-rules-ai-chips-china",
+   "title": "国会拟在英伟达间谍丑闻后收紧AI芯片出口规则",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://sspai.com/post/118153",
+   "title": "研究生如何用AI辅助完成一篇综述：我的科研写作工具与实践经验",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://github.com/alibaba/open-code-review",
+   "title": "阿里开源代码审查工具，混合架构支持多语言规则",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://github.com/Tencent/LoopForge",
+   "title": "腾讯开源编码代理编排工具，支持人工审批卡点",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://techcrunch.com/2026/11/13/ai-agent-startup-langchain-hits-3b-valuation/",
+   "title": "LangChain估值达30亿美元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://techcrunch.com/2026/11/13/chatgpts-new-wallet-lets-ai-agents-shop-and-check-out-for-you/",
+   "title": "ChatGPT钱包上线，AI代理可替你下单付款",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.theverge.com/ai-artificial-intelligence/1032518/claude-duet-ai-agent-hands-on",
+   "title": "Claude Duet代理实测：有点神经质但意外好用",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://litnews.ai/articles/garciaguirre-samsung-sk-hynix-micron-dram-conspiracy-suit-survives-dismissal",
+   "title": "DRAM价格操纵案法院驳回撤诉动议",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/cj/2026/11-15/10732517.shtml",
+   "title": "中国平台企业优化新就业群体劳动权益保障",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/cj/2026/11-15/10732516.shtml",
+   "title": "郑永年专访：西方唱衰中国经济毫无道理，商界知道动力在哪",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.bbc.co.uk/news/articles/c6rrg51rkz09o?at_medium=RSS&at_campaign=rss",
+   "title": "微软全球宕机后服务已全面恢复",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.nytimes.com/2026/11/15/business/anthropic-ipo-filing-prospectus.html",
+   "title": "Anthropic递交IPO文件，坦承AI存在生存风险",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/gn/2026/11-15/10732511.shtml",
+   "title": "聚焦APEC丨2000余位政商界领袖将参加APEC工商领导人峰会",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/gn/2026/11-15/10732510.shtml",
+   "title": "李强抵马尼拉出席中国－东盟领导人会议",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.bbc.co.uk/news/articles/cqn4e2py48kwo?at_medium=RSS&at_campaign=rss",
+   "title": "伊朗连续两天用无人机袭击美军驻巴林基地",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.dw.com/en/estonia-closes-border-to-russia-after-suspected-drone-factory-arson/a-79953115?maca=en-rss-en-all-1573-rdf",
+   "title": "爱沙尼亚因无人机工厂纵火案关闭对俄边境口岸",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.bbc.co.uk/news/articles/ckregdgnl0xpo?at_medium=RSS&at_campaign=rss",
+   "title": "SpaceX首次成功用机械臂在半空捕获星舰火箭上级",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.bbc.co.uk/weather/articles/cke8rr37lrryo?at_medium=RSS&at_campaign=rss",
+   "title": "11月黎明前天空可见水星金星火星木星排列",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.qbitai.com/2026/11/510094.html",
+   "title": "联想发布\"词元工厂\"，绿电进Token出年产2000万亿",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.qbitai.com/2026/11/510297.html",
+   "title": "英伟达员工集体请愿让黄仁勋回归",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.qbitai.com/2026/11/510232.html",
+   "title": "斯坦福哈佛等发布史上最严湿实验预测基准",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.cnbc.com/2026/11/15/bessent-nvidia-ceo-lutnick-megaspeed.html",
+   "title": "贝森特呼吁英伟达大幅改组并敦促引入外部CEO",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.cnbc.com/2026/11/13/nvidia-jensen-huang-resignation-ai-financing.html",
+   "title": "英伟达CEO黄仁勋离职后AI融资策略受关注",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.marketwatch.com/story/nvidia-is-gearing-up-for-one-of-wall-streets-most-anticipated-earnings-calls-in-years-91855b1e?mod=mw_rss_topstories",
+   "title": "英伟达筹备多年来最受关注的财报电话会",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.nasdaq.com/articles/elevance-health-targets-12-earnings-growth-2027-insurance-margins-recover",
+   "title": "Elevance Health预计2027年调整后每股收益至少增长12%，2026年基线为至少26.75美元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.nasdaq.com/articles/dynatrace-sees-ai-customers-consuming-its-platform-twice-rate-fueling-growth-hopes",
+   "title": "Dynatrace称AI客户对其平台的消费速度是普通客户的两倍",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.nasdaq.com/articles/vecima-networks-q1-earnings-call-highlights",
+   "title": "Vecima Networks第一财季创纪录营收，重申全年营收展望",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://news.rthk.hk/rthk/ch/component/k2/1877895-20261115.htm",
+   "title": "新世界发展1供11供股集资249亿港元，大股东周大福企业包销",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://news.rthk.hk/rthk/ch/component/k2/1877901-20261115.htm",
+   "title": "新世界黄少媚称大股东承担包销责任绝非摊薄或剥削小股东",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.gamespot.com/articles/physical-gta-6-copies-might-be-vulnerable-to-a-very-stupid-but-serious-trick/",
+   "title": "《GTA 6》实体版包装存漏洞，玩家或可用简单手法盗取激活码",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.ign.com/articles/league-of-legends-new-dawn-unveiled-with-debut-trailer-riot-announces-major-overhaul-coming-in-2027",
+   "title": "《英雄联盟》公布2027年大型 overhaul“New Dawn”，含视觉与客户端更新",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.polygon.com/monster-hunter-wilds-nintendo-switch-2-release-date/",
+   "title": "《怪物猎人：荒野》将登陆Switch 2，发售前预购享75折",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.gamedeveloper.com/business/european-union-proposes-digital-fairness-act-which-could-have-major-effects-on-game-development",
+   "title": "欧盟拟立法严管免费游戏",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.gamesindustry.biz/steams-submission-and-approval-backlog-is-forcing-indie-devs-to-delay-game-launches",
+   "title": "Steam审核积压致独立开发者被迫推迟发售",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.dezeen.com/2026/11/15/netherlands-central-bank-renovation-mecanoo/",
+   "title": "Mecanoo将荷兰央行旧金库改造成\"城市客厅\"",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.designboom.com/design/gio-tirotto-domestic-chair-public-bench-italy-gulf-poets-vita-lenta/",
+   "title": "Gio Tirotto将家用椅比例延伸为意大利诗人湾的公共长椅",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.designboom.com/art/bird-plane-funny-weather-theo-triantafyllidis/",
+   "title": "Theo Triantafyllidis装置《Funny Weather》以极端天气为叙事者",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.bbc.co.uk/news/articles/cwn83gxemk35o?at_medium=RSS&at_campaign=rss",
+   "title": "意大利因未经告知访问用户照片对Meta罚款8.05亿欧元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.politico.eu/article/estonia-accuses-russia-of-attempted-arson-attack-on-drone-maker/?utm_source=RSS_Feed&utm_medium=RSS&utm_campaign=RSS_Syndication",
+   "title": "爱沙尼亚因国防企业遭纵火攻击关闭对俄边境口岸",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.ansa.it/english/news/news_from_embassies/2026/11/14/pianists-alessandra-ammara-and-roberto-prosseda-to-perform-in-vilnius_6317424a-24cb-4e09-8077-3d8a800be7e9.html",
+   "title": "意大利因未经告知访问用户照片对Meta罚款8.05亿欧元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.ansa.it/english/news/news_from_embassies/2026/11/14/farnesina_secretary_general_in_pakistan_for_talks_with_local_authorities_9c4d0978-8ede-4301-8cf1-6cfeacee8a40.html",
+   "title": "Farnesina秘书长赴巴基斯坦与当地当局会谈",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/gj/2026/11-16/10732530.shtml",
+   "title": "法国周末示威活动超400人被拘捕",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/ty/2026/11-15/10732529.shtml",
+   "title": "乒乓球前国手方博夺得复出后首冠",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "http://www.news.cn/politics/2022-12/14/c_1129207117.htm",
+   "title": "国家卫健委发布新冠疫苗第二剂次加强免疫接种实施方案",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.chinanews.com.cn/cj/2026/11-15/10732492.shtml",
+   "title": "云南提出建设RCEP国际教育合作区",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://variety.com/2026/film/box-office/box-office-domestic-ticket-sales-increase-hunger-games-dune-3-avengers-doomsday-1236948160/",
+   "title": "北美票房同比涨20%，《饥饿游戏》前传、《沙丘3》《复仇者联盟：末日》待映",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://deadline.com/2026/11/box-office-global-ebenezer-ramayana-godzilla-minus-zero-1237224479/",
+   "title": "《埃比尼泽》海外收4200万美元，《罗摩衍那》近1.5亿，《哥斯拉-0》破亿",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.indiewire.com/news/festivals/toruncamerimage-golden-frog-winners-2026-1235227760/",
+   "title": "《祖国》获托伦Camerimage电影节金蛙奖",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.nme.com/news/music/lana-del-rey-dua-lipa-zara-larsson-gta-vi-the-album-full-tracklist-3975990",
+   "title": "Lana Del Rey、Dua Lipa等参与《GTA VI》原声专辑曲目公布",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://consequence.net/2026/11/phil-collins-on-music-and-performing/",
+   "title": "Phil Collins入选摇滚名人堂成为两度入选者，称“还没说完”",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://pitchfork.com/reviews/albums/pearl-jam-yield/",
+   "title": "Pearl Jam《Yield》获Pitchfork回顾评论",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.artforum.com/news/lorna-simpson-awarded-2027-wolfgang-hahn-prize-1234763599/",
+   "title": "洛娜·辛普森获2027年沃尔夫冈·哈恩奖",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.artforum.com/news/nmoa-returns-1852-jug-by-david-drake-to-artists-family-1234763595/",
+   "title": "纽瓦克博物馆归还大卫·德雷克1852年陶罐",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.artforum.com/news/the-whitney-museum-sends-de-kooning-to-auction-1234763584/",
+   "title": "惠特尼博物馆送德库宁画作上拍",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://luxe.co/post/489109",
+   "title": "复朗集团收到纽交所退市预警，股价连续30个交易日低于1美元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://luxe.co/post/488856",
+   "title": "索康尼增速领跑，Wolverine上季度营收同比增长7.5%至5亿美元",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://luxe.co/post/488722",
+   "title": "英国奢侈腕表二手交易平台Subdial完成2000万美元融资",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/shorts/VtamWFJ7AtI",
+   "title": "中文圈大部分都是IFBB pro",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/shorts/W8ovty0NFoA",
+   "title": "10年後的男人會是什麼樣？",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/watch?v=3y3d4mdZgqI",
+   "title": "把女人壓在你下面疼愛是擁有完美關係的必要前提",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/watch?v=_KJRVmo6vms",
+   "title": "為什麼不應該給女人花錢/如何跟女生說你想要發展多線關係/是不是只有高富帥才能當Alpha男",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/watch?v=soKY2VARrLE",
+   "title": "美國全國停飛，竟是因為UFO？｜五角大樓UFO檔案越解密越離譜｜麓安說261115。",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://www.youtube.com/watch?v=eeJ4xkadLZc",
+   "title": "2027年起，AI將會給人類帶來15年的地獄期。你的飯碗如何保得住？｜麓安說261114",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD",
+   "title": "中国首度出席联合国大会",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://zh.wikipedia.org/wiki/1999%E5%B9%B4",
+   "title": "中美签署入世双边协议",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  },
+  {
+   "url": "https://zh.wikipedia.org/wiki/%E6%9E%84%E6%88%90%E4%B8%BB%E4%B9%89",
+   "title": "构成主义",
+   "ts": "2026-11-15T20:36:02.321664+01:00"
+  }
+ ]
+}
