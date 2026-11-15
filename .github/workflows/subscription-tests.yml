@@ -7,6 +7,7 @@ on:
       - 'web/**'
       - 'tests/**'
       - 'run_all.py'
+      - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
       - '.github/workflows/subscription-tests.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'web/**'
       - 'tests/**'
       - 'run_all.py'
+      - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
       - '.github/workflows/subscription-tests.yml'
 

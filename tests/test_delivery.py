@@ -52,6 +52,32 @@ class DeliveryTest(StoreCase):
         with self.store.connect() as conn:
             return [dict(row) for row in conn.execute("SELECT * FROM delivery_log ORDER BY created_at,id")]
 
+    def test_both_editions_send_once_and_consume_two_trial_issues(self):
+        account = self.subscriber()
+        evening_time = NOW + timedelta(hours=1)
+        evening = self.store.freeze_issue("2026-11-15", {"gaming": SECTIONS["ai"]}, evening_time, edition="evening")
+        self.assertEqual(self.delivery.enqueue_issue(evening, NOW), 0)
+        self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 1)
+        self.assertEqual(self.delivery.run_once(NOW), "success")
+        self.assertEqual(self.delivery.enqueue_issue(evening, evening_time), 1)
+        self.assertEqual(self.delivery.run_once(evening_time), "success")
+        self.assertEqual(self.delivery.enqueue_issue(evening, evening_time), 0)
+        self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 1)
+        subjects = [call[2]["subject"] for call in ProviderHandler.calls]
+        self.assertIn("早报", subjects[0])
+        self.assertIn("晚报", subjects[1])
+
+    def test_expanded_snapshot_preserves_all_topics_and_legacy_three_topic_rendering(self):
+        from subscription.store import SECTIONS as TOPICS
+        expanded = {key: f"官方|||{label}新闻|||https://example.com/{key}|||主题|||事实|||影响" for key, label in TOPICS.items()}
+        html, text = render_issue("2026-11-15", expanded, ["sports_health", "gaming"], "https://brief.example.com", "token")
+        self.assertLess(html.index('id="section-sports_health"'), html.index('id="section-markets"'))
+        self.assertLess(html.index('id="section-gaming"'), html.index('id="section-markets"'))
+        for label in TOPICS.values():
+            self.assertIn(label, text)
+        legacy_html, _ = render_issue("2026-11-15", SECTIONS, ["gaming"], "https://brief.example.com", "token")
+        self.assertIn("市场消息", legacy_html)
+
     def test_scan_and_worker_are_idempotent_and_consume_one_trial(self):
         account = self.subscriber()
         self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 1)

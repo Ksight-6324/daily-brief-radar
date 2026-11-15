@@ -5,11 +5,40 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import datetime, timezone
 
-from subscription.store import Store
+from subscription.store import SECTIONS, Store
 from tests.support import NOW, StoreCase
 
 
 class StoreTest(StoreCase):
+    def test_all_fifteen_topics_can_be_selected_and_cleared(self):
+        self.assertEqual(list(SECTIONS.values()), [
+            "股票经济", "石油黄金", "政治军事", "中外历史", "音乐演出", "设计美术", "专辑影视",
+            "人工智能", "自我提升", "物理化学", "生物科技", "心灵疗养", "就业机会", "体育健康", "电竞游戏",
+        ])
+        account = self.store.register("topics@example.com", list(SECTIONS), NOW)
+        self.store.confirm(account["confirmation_token"], NOW)
+        self.assertEqual(set(json.loads(self.store.subscriber(account["id"])["preferences"])), set(SECTIONS))
+        self.store.set_preferences(account["manage_token"], [], NOW)
+        self.assertEqual(json.loads(self.store.subscriber(account["id"])["preferences"]), [])
+
+    def test_weekly_payment_costs_three_yuan_and_extends_exactly_seven_days_once(self):
+        account = self.subscriber()
+        order = self.store.create_order(account["id"], "weekly", NOW)
+        self.assertEqual(order["amount"], 300)
+        self.store.confirm_payment(order["order_token"], "weekly-1", 300, NOW)
+        expiry = self.store.subscription(account["id"])["expires_at"]
+        self.assertEqual(expiry, "2026-11-22T11:00:00+00:00")
+        self.store.confirm_payment(order["order_token"], "weekly-1", 300, NOW)
+        self.assertEqual(self.store.subscription(account["id"])["expires_at"], expiry)
+
+    def test_morning_and_evening_snapshots_are_independent_and_accept_available_topics(self):
+        morning = self.store.freeze_issue("2026-11-15", {"sports_health": "体育新闻"}, NOW, edition="morning")
+        evening = self.store.freeze_issue("2026-11-15", {"gaming": "赛事新闻"}, NOW, edition="evening")
+        self.assertNotEqual(morning, evening)
+        self.assertEqual(self.store.freeze_issue("2026-11-15", {"sports_health": "体育新闻"}, NOW, edition="morning"), morning)
+        with self.assertRaises(ValueError):
+            self.store.freeze_issue("2026-11-15", {"sports_health": "覆盖"}, NOW, edition="morning")
+
     def test_confirmation_and_email_normalization(self):
         account = self.store.register(" Reader@Example.com ", [], NOW)
         self.assertEqual(self.store.subscriber(account["id"])["status"], "pending")
@@ -99,7 +128,7 @@ class StoreTest(StoreCase):
         with self.assertRaises(ValueError):
             self.store.freeze_issue("2026-11-15", {**sections, "jobs": "修改"}, NOW)
         with self.assertRaises(ValueError):
-            self.store.freeze_issue("2026-11-16", {"markets": "新闻"}, NOW)
+            self.store.freeze_issue("2026-11-16", {"unknown": "新闻"}, NOW)
         with closing(sqlite3.connect(self.store.path)) as conn, self.assertRaises(sqlite3.IntegrityError):
             conn.execute("UPDATE daily_issue SET sections = '{}' WHERE id = ?", (first,))
 

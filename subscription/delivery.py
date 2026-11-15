@@ -9,7 +9,7 @@ from uuid import uuid4
 import requests
 
 from .render import links, render_issue, render_notice
-from .store import GRACE_DAYS, ROME, stamp, utcnow
+from .store import BEIJING, EDITIONS, GRACE_DAYS, stamp, utcnow
 
 
 class ResendClient:
@@ -77,10 +77,10 @@ class Delivery:
             confirmation_url = f"{self.base_url}/confirm#{self.store.token(row, 'confirm')}"
             manage_url, unsubscribe_url = links(self.base_url, self.store.token(row))
             from html import escape
-            html = (f'<h1>确认订阅 Daily Brief Radar</h1><p>每天一封，三分钟读完。确认后开始三期免费试读。</p>'
+            html = (f'<h1>确认订阅 Daily Brief Radar</h1><p>北京时间每天 08:00 和 20:00 各一封。确认后开始三期免费试读，按邮件期数计算。</p>'
                     f'<p><a href="{escape(confirmation_url)}">确认我的邮箱</a></p><p>链接两天内有效。</p>'
                     f'<p><a href="{escape(manage_url)}">管理偏好</a> · <a href="{escape(unsubscribe_url)}">退订</a></p>')
-            text = (f"确认订阅 Daily Brief Radar，开始三期免费试读。\n{confirmation_url}"
+            text = (f"确认订阅 Daily Brief Radar，开始三期免费试读。北京时间每天 08:00 和 20:00 各一封，按邮件期数计算。\n{confirmation_url}"
                     f"\n管理偏好 {manage_url}\n退订 {unsubscribe_url}")
             payload = self.payload(row, "请确认你的简报订阅", html, text)
             return self.enqueue(conn, row, "confirmation", row["token_nonce"], payload, now)
@@ -92,8 +92,10 @@ class Delivery:
             issue = conn.execute("SELECT * FROM daily_issue WHERE id=?", (issue_id,)).fetchone()
             if issue is None:
                 raise ValueError("内容快照不存在")
-            if issue["issue_date"] != now.astimezone(ROME).date().isoformat():
+            if issue["issue_date"] != now.astimezone(BEIJING).date().isoformat():
                 raise ValueError("仅发送当天快照")
+            if issue["edition"] not in EDITIONS or now.astimezone(BEIJING).hour < EDITIONS[issue["edition"]][0]:
+                return 0
             sections = json.loads(issue["sections"])
             for row in conn.execute(ACCOUNT_QUERY).fetchall():
                 mode = eligibility(row, now)
@@ -105,9 +107,10 @@ class Delivery:
                     if reserved >= row["trial_remaining"]:
                         continue
                 html, text = render_issue(issue["issue_date"], sections, json.loads(row["preferences"]),
-                                          self.base_url, self.store.token(row), mode == "grace")
-                payload = self.payload(row, f"Daily Brief Radar · {issue['issue_date']}", html, text)
-                count += self.enqueue(conn, row, "daily_brief", issue["issue_date"], payload, now, issue_id)
+                                          self.base_url, self.store.token(row), mode == "grace", issue["edition"])
+                label = EDITIONS[issue["edition"]][1]
+                payload = self.payload(row, f"Daily Brief Radar · {issue['issue_date']} {label}", html, text)
+                count += self.enqueue(conn, row, "daily_brief", issue["issue_date"] + "/" + issue["edition"], payload, now, issue_id)
         return count
 
     def enqueue_reminders(self, now=None):
@@ -121,7 +124,7 @@ class Delivery:
                 cycle = row["expires_at"] or "trial"
                 if row["expires_at"]:
                     expiry = datetime.fromisoformat(row["expires_at"])
-                    days = (expiry.astimezone(ROME).date() - now.astimezone(ROME).date()).days
+                    days = (expiry.astimezone(BEIJING).date() - now.astimezone(BEIJING).date()).days
                     reminder = {7: "t7", 3: "t3", 1: "t1"}.get(days)
                     if now >= expiry + timedelta(days=GRACE_DAYS):
                         reminder = "paused"

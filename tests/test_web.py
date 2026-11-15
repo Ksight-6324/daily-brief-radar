@@ -17,6 +17,23 @@ class WebTest(StoreCase):
     def headers(self, account):
         return {"Authorization": "Bearer " + account["manage_token"]}
 
+    def test_public_options_and_api_accept_all_fifteen_preferences(self):
+        response = self.client.get("/api/options")
+        self.assertEqual(response.status_code, 200)
+        options = response.json()
+        self.assertEqual(len(options["topics"]), 15)
+        self.assertEqual(options["plans"][0], {"id": "weekly", "label": "周付", "amount": 300, "days": 7})
+        self.assertEqual(options["schedule"], {"timezone": "Asia/Shanghai", "times": ["08:00", "20:00"]})
+        selected = [topic["id"] for topic in options["topics"]]
+        self.assertEqual(self.client.post("/api/subscribe", json={
+            "email": "all@example.com", "preferences": selected, "consent": True,
+        }).status_code, 200)
+        account = self.subscriber()
+        response = self.client.post("/api/preferences", headers=self.headers(account), json={"preferences": selected})
+        self.assertEqual(response.status_code, 200)
+        saved = self.client.get("/api/account", headers=self.headers(account)).json()["preferences"]
+        self.assertEqual(set(saved), set(selected))
+
     def test_subscribe_requires_consent_and_queues_confirmation(self):
         values = {"email": "new@example.com", "preferences": ["jobs"], "consent": False}
         self.assertEqual(self.client.post("/api/subscribe", json=values).status_code, 422)

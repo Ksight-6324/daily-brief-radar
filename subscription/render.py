@@ -5,7 +5,7 @@ from pathlib import Path
 from string import Template
 from urllib.parse import quote, urlsplit
 
-from .store import SECTIONS
+from .store import EDITIONS, SECTIONS
 
 
 def safe_link(value):
@@ -33,25 +33,30 @@ def card(text):
     return html, f"{title}\n{summary}\n为什么重要\n{importance}\n{source} {url}", importance
 
 
-def render_issue(issue_date, sections, selected, base_url, token, grace=False):
-    selected = [key for key in SECTIONS if key in selected]
-    ordered = selected + [key for key in SECTIONS if key not in selected]
-    content = ['<h2 style="font-size:15px;letter-spacing:1px">今日三条必知</h2>']
-    text_parts = [f"Daily Brief Radar · {issue_date}", "今日三条必知"]
+def render_issue(issue_date, sections, selected, base_url, token, grace=False, edition=None):
+    available = [key for key in SECTIONS if key in sections]
+    selected = [key for key in available if key in selected]
+    ordered = selected + [key for key in available if key not in selected]
+    label = "本期必知" if len(ordered) < 3 else "本期三条必知"
+    content = [f'<h2 style="font-size:15px;letter-spacing:1px">{label}</h2>']
+    heading = issue_date + (" · " + EDITIONS[edition][1] if edition else "")
+    text_parts = [f"Daily Brief Radar · {heading}", label]
     observation = ""
     for index, key in enumerate(ordered):
-        if selected and index == len(selected):
-            content.append('<h2 style="font-size:15px;border-top:1px solid #dce3d8;padding-top:24px">其他值得一扫</h2>')
+        if index == 3:
+            content.append('<details><summary style="font-size:15px;border-top:1px solid #dce3d8;padding-top:24px">其他值得一扫</summary>')
             text_parts.append("其他值得一扫")
         html, text, hint = card(sections[key])
         content.append(f'<div id="section-{key}" style="margin:24px 0"><p style="color:#66736a;font-size:12px">{index+1:02d} / {SECTIONS[key]}</p>{html}</div>')
         text_parts.append(text)
         if not observation:
             observation = hint
+    if len(ordered) > 3:
+        content.append("</details>")
     banner = "你的订阅已到期，目前处于三天宽限期。请续费以继续收到简报。" if grace else ""
     manage_url, unsubscribe_url = links(base_url, token)
     template = Template(Path(__file__).with_name("email.html").read_text(encoding="utf-8"))
-    html = template.substitute(issue_date=escape(issue_date), content="".join(content),
+    html = template.substitute(issue_date=escape(heading), content="".join(content),
                                banner=escape(banner), observation="观察点 · " + escape(observation),
                                manage_url=escape(manage_url, quote=True), unsubscribe_url=escape(unsubscribe_url, quote=True))
     text_parts += [banner, "观察点 · " + observation, "管理偏好或续费 " + manage_url, "退订 " + unsubscribe_url]

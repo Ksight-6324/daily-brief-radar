@@ -12,7 +12,7 @@
       <mj-column>
         <mj-text font-size="12px" letter-spacing="2px">DAILY BRIEF RADAR · $issue_date</mj-text>
         <mj-text font-size="30px" font-weight="700" padding-top="4px">把今天的世界补全。</mj-text>
-        <mj-text color="#66736a">每日三条必知 · 三分钟文字简报</mj-text>
+        <mj-text color="#66736a">北京时间早八点、晚八点 · 三分钟文字简报</mj-text>
       </mj-column>
     </mj-section>
     <mj-section background-color="#ffffff" padding="20px">

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -10,12 +11,13 @@ from dotenv import load_dotenv
 
 from .delivery import Delivery
 from .pipeline import freeze_markdown, generate_markdown
-from .store import ROME, Store, utcnow
+from .store import BEIJING, EDITIONS, Store, edition_for, utcnow
 
 
 def main():
     load_dotenv(Path.cwd() / ".env")
     parser = argparse.ArgumentParser(description="Daily Brief Radar subscription operations")
+    parser.add_argument("--edition", choices=EDITIONS, default=os.environ.get("BRIEF_EDITION"))
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
     commands.add_parser("status")
@@ -37,6 +39,7 @@ def main():
     store = Store()
     delivery = Delivery(store)
     now = utcnow()
+    edition = args.edition or edition_for(now)
     if args.command == "init":
         print("Database initialized")
     elif args.command == "register":
@@ -46,21 +49,19 @@ def main():
             delivery.enqueue_confirmation(account, now)
         print("Confirmation requested")
     elif args.command == "generate":
-        generate_markdown(now)
-        print("Shared MVP content generated")
+        generate_markdown(now, edition=edition)
+        print("Shared edition content generated")
     elif args.command in ("freeze", "publish"):
-        with store.connect() as conn:
-            issue = conn.execute("SELECT id FROM daily_issue WHERE issue_date=?", (now.astimezone(ROME).date().isoformat(),)).fetchone()
+        issue = store.issue(now.astimezone(BEIJING).date().isoformat(), edition)
         if issue and args.command == "publish":
             issue_id = issue["id"]
         else:
             text = Path(getattr(args, "input", "daily_brief.md")).read_text(encoding="utf-8-sig")
-            issue_id = freeze_markdown(store, text, now)
+            issue_id = freeze_markdown(store, text, now, edition=edition)
         queued = delivery.enqueue_issue(issue_id, now) if args.command == "publish" else 0
         print(json.dumps({"issue_id": issue_id, "queued": queued}))
     elif args.command == "scan":
-        with store.connect() as conn:
-            issue = conn.execute("SELECT id FROM daily_issue WHERE issue_date=?", (now.astimezone(ROME).date().isoformat(),)).fetchone()
+        issue = store.issue(now.astimezone(BEIJING).date().isoformat(), edition)
         count = delivery.enqueue_issue(issue["id"], now) if issue else 0
         count += delivery.enqueue_reminders(now)
         print(json.dumps({"queued": count}))

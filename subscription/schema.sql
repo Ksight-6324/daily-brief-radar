@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
     order_token TEXT NOT NULL UNIQUE,
     subscriber_id TEXT REFERENCES subscribers(id),
-    plan TEXT CHECK (plan IN ('monthly','quarterly','annual')),
+    plan TEXT CHECK (plan IN ('weekly','monthly','quarterly','annual')),
     amount INTEGER NOT NULL CHECK (amount > 0),
     payment_ref TEXT UNIQUE,
     status TEXT NOT NULL CHECK (status IN ('pending','paid','refunded','unmatched')),
@@ -57,9 +57,11 @@ BEGIN SELECT RAISE(ABORT, 'expiry requires a new confirmed order'); END;
 
 CREATE TABLE IF NOT EXISTS daily_issue (
     id TEXT PRIMARY KEY,
-    issue_date TEXT NOT NULL UNIQUE,
+    issue_date TEXT NOT NULL,
+    edition TEXT NOT NULL CHECK (edition IN ('morning','evening','legacy')),
     sections TEXT NOT NULL,
-    generated_at TEXT NOT NULL
+    generated_at TEXT NOT NULL,
+    UNIQUE(issue_date, edition)
 );
 
 CREATE TRIGGER IF NOT EXISTS daily_issue_immutable_update
@@ -104,4 +106,4 @@ CREATE TABLE IF NOT EXISTS request_limits (
     window_start TEXT NOT NULL,
     count INTEGER NOT NULL
 );
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;

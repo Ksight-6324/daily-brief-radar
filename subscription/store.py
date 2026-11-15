@@ -13,15 +13,29 @@ from pathlib import Path
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from .migrations import initialize
 
-PLANS = {"monthly": (990, 30), "quarterly": (2900, 90), "annual": (9900, 365)}
-SECTIONS = {"markets": "股票经济", "ai": "人工智能", "jobs": "就业机会"}
-ROME = ZoneInfo("Europe/Rome")
+
+PLANS = {"weekly": (300, 7), "monthly": (990, 30), "quarterly": (2900, 90), "annual": (9900, 365)}
+PLAN_LABELS = {"weekly": "周付", "monthly": "月付", "quarterly": "季付", "annual": "年付"}
+SECTIONS = {
+    "markets": "股票经济", "commodities": "石油黄金", "politics_mil": "政治军事",
+    "history": "中外历史", "live_music": "音乐演出", "design_art": "设计美术",
+    "album_film": "专辑影视", "ai": "人工智能", "growth": "自我提升",
+    "science_pc": "物理化学", "biotech": "生物科技", "mind": "心灵疗养",
+    "jobs": "就业机会", "sports_health": "体育健康", "gaming": "电竞游戏",
+}
+BEIJING = ZoneInfo("Asia/Shanghai")
+EDITIONS = {"morning": (8, "早报"), "evening": (20, "晚报")}
 GRACE_DAYS = 3
 
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+def edition_for(now):
+    return "evening" if now.astimezone(BEIJING).hour >= 20 else "morning"
 
 
 def stamp(value):
@@ -57,11 +71,8 @@ class Store:
             secret = key_path.read_text(encoding="ascii")
         self.secret = secret.encode()
         with self.connect() as conn:
-            version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version > 1:
-                raise ValueError("数据库版本高于当前程序支持版本")
             conn.execute("PRAGMA journal_mode=WAL")
-            conn.executescript(Path(__file__).with_name("schema.sql").read_text(encoding="utf-8"))
+            initialize(conn)
 
     @contextmanager
     def connect(self):
@@ -114,6 +125,11 @@ class Store:
     def order(self, order_token):
         with self.connect() as conn:
             row = conn.execute("SELECT * FROM orders WHERE order_token=?", (order_token,)).fetchone()
+            return dict(row) if row else None
+
+    def issue(self, issue_date, edition):
+        with self.connect() as conn:
+            row = conn.execute("SELECT * FROM daily_issue WHERE issue_date=? AND edition=?", (issue_date, edition)).fetchone()
             return dict(row) if row else None
 
     def register(self, email, selected, now=None):
@@ -218,20 +234,24 @@ class Store:
                          (order["subscriber_id"],))
             return "paid"
 
-    def freeze_issue(self, issue_date, sections, now=None):
+    def freeze_issue(self, issue_date, sections, now=None, edition=None):
+        now = now or utcnow()
+        edition = edition or edition_for(now)
         date.fromisoformat(issue_date)
-        if set(sections) != set(SECTIONS) or any(not isinstance(value, str) or not value.strip() for value in sections.values()):
-            raise ValueError("快照必须包含三个有效 MVP 板块")
+        if edition not in EDITIONS:
+            raise ValueError("请选择早报或晚报版次")
+        if not sections or not set(sections).issubset(SECTIONS) or any(not isinstance(value, str) or not value.strip() for value in sections.values()):
+            raise ValueError("快照必须包含有效主题内容")
         payload = json.dumps(sections, sort_keys=True, ensure_ascii=False)
         with self.transaction() as conn:
-            row = conn.execute("SELECT * FROM daily_issue WHERE issue_date=?", (issue_date,)).fetchone()
+            row = conn.execute("SELECT * FROM daily_issue WHERE issue_date=? AND edition=?", (issue_date, edition)).fetchone()
             if row:
                 if row["sections"] != payload:
                     raise ValueError("该期快照已冻结，禁止覆盖")
                 return row["id"]
             issue_id = uuid4().hex
-            conn.execute("INSERT INTO daily_issue(id,issue_date,sections,generated_at) VALUES(?,?,?,?)",
-                         (issue_id, issue_date, payload, stamp(now or utcnow())))
+            conn.execute("INSERT INTO daily_issue(id,issue_date,edition,sections,generated_at) VALUES(?,?,?,?,?)",
+                         (issue_id, issue_date, edition, payload, stamp(now)))
             return issue_id
 
     def allow_request(self, bucket, limit, now=None):

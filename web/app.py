@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, StrictBool
 
 from subscription.delivery import Delivery
 from subscription.payments import Alipay
-from subscription.store import SECTIONS, Store, stamp, utcnow
+from subscription.store import PLAN_LABELS, PLANS, SECTIONS, Store, stamp, utcnow
 
 
 STATIC = Path(__file__).with_name("static")
@@ -24,7 +24,7 @@ STATIC = Path(__file__).with_name("static")
 
 class Signup(BaseModel):
     email: str = Field(min_length=3, max_length=254)
-    preferences: list[str] = Field(default_factory=list, max_length=3)
+    preferences: list[str] = Field(default_factory=list, max_length=len(SECTIONS))
     consent: StrictBool
 
 
@@ -33,7 +33,7 @@ class Confirmation(BaseModel):
 
 
 class Preferences(BaseModel):
-    preferences: list[str] = Field(max_length=3)
+    preferences: list[str] = Field(max_length=len(SECTIONS))
 
 
 class OrderRequest(BaseModel):
@@ -77,6 +77,15 @@ def create_app(store=None, delivery=None, payment=None):
         with store.connect() as conn:
             conn.execute("SELECT 1")
         return {"status": "ok"}
+
+    @app.get("/api/options")
+    def options():
+        return {
+            "topics": [{"id": key, "label": label} for key, label in SECTIONS.items()],
+            "plans": [{"id": key, "label": PLAN_LABELS[key], "amount": amount, "days": days}
+                      for key, (amount, days) in PLANS.items()],
+            "schedule": {"timezone": "Asia/Shanghai", "times": ["08:00", "20:00"]},
+        }
 
     @app.post("/api/subscribe")
     def subscribe(values: Signup, request: Request):

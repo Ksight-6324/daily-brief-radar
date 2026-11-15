@@ -83,6 +83,25 @@ class PaymentTest(StoreCase):
             with self.assertRaises(ValueError):
                 self.provider.precreate(order, NOW)
 
+    def test_weekly_order_uses_three_yuan_in_signed_precreate_and_callback(self):
+        from fastapi.testclient import TestClient
+        from web.app import create_app
+        from subscription.store import utcnow
+        account = self.subscriber()
+        order = self.store.create_order(account["id"], "weekly", utcnow())
+        headers = {"Authorization": "Bearer " + account["manage_token"]}
+        with TestClient(create_app(self.store, payment=self.provider)) as client:
+            with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"])) as gateway:
+                response = client.post("/api/orders", headers=headers, json={"plan": "weekly"})
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()["amount"], 300)
+            self.assertEqual(json.loads(gateway.call_args.kwargs["data"]["biz_content"])["total_amount"], "3.00")
+            notification = self.notification(order["order_token"], total_amount="3.00", trade_no="ali-weekly")
+            self.assertEqual(client.post("/api/payments/alipay/notify", data=notification).text, "success")
+            expiry = self.store.subscription(account["id"])["expires_at"]
+            self.assertEqual(client.post("/api/payments/alipay/notify", data=notification).text, "success")
+            self.assertEqual(self.store.subscription(account["id"])["expires_at"], expiry)
+
     def test_real_payment_api_route_verifies_callback_and_enforces_order_ownership(self):
         from fastapi.testclient import TestClient
         from web.app import create_app

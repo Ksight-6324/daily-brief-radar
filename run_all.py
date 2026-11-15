@@ -33,14 +33,17 @@ steps = FETCH_STEPS + [
 ]
 
 if os.environ.get("BRIEF_MODE") == "subscription":
-    from subscription.store import ROME, Store, utcnow
+    from subscription.store import BEIJING, EDITIONS, Store, edition_for, utcnow
 
-    with Store().connect() as connection:
-        frozen = connection.execute("SELECT id FROM daily_issue WHERE issue_date=?",
-                                    (utcnow().astimezone(ROME).date().isoformat(),)).fetchone()
+    now = utcnow()
+    edition = os.environ.get("BRIEF_EDITION") or edition_for(now)
+    if edition not in EDITIONS:
+        raise ValueError("BRIEF_EDITION 必须为 morning 或 evening")
+    os.environ["BRIEF_EDITION"] = edition
+    frozen = Store().issue(now.astimezone(BEIJING).date().isoformat(), edition)
     steps = [] if frozen else [
         ("抓取订阅版新闻", "fetchers/fetch_category_news.py"),
-        ("生成通用三板块摘要", "-m", "subscription.cli", "generate"),
+        ("生成本期主题摘要", "-m", "subscription.cli", "generate"),
     ]
     steps.append(("冻结快照并创建发送任务", "-m", "subscription.cli", "publish"))
 
