@@ -2,3 +2,8 @@ requests
 beautifulsoup4
 feedparser
 youtube-transcript-api>=1.0
+cryptography>=44
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-multipart>=0.0.20
+tzdata

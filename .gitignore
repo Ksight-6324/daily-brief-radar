@@ -7,3 +7,13 @@ daily_brief.md
 
 # 已推送记录需要保存进仓库（工作流会自动提交它）
 !seen_items.json
+
+# Subscription state and credentials live on a persistent volume.
+var/
+*.db
+*.db-*
+*.db.key
+.env
+.env.*
+!.env.example
+node_modules/
