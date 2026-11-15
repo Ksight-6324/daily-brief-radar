@@ -49,7 +49,7 @@ NO_RHETORIC_RULE = "语言要求：绝对不要使用任何比喻、拟人、排
 
 NO_JARGON_RULE = """语言风格提醒：写"为什么重要""对用户的意义"这类字段时，不要用"作为面试素材"
 "输出产品分析笔记""评估技术可行性"这类空洞的职场黑话或工作任务式表达凑数。要用"你可以..."这种
-第二人称、直接、具体的大白话表达，说清楚这条信息对她本人（结合上面的个人背景判断她的真实身份和
+第二人称、直接、具体的大白话表达，说清楚这条信息对TA本人（结合上面的个人背景判断TA的真实身份和
 阶段）具体有什么用、能做什么，不要用一套万能模板去套所有人。"""
 
 
@@ -70,19 +70,19 @@ _DEFAULT_PROFILE_TEXT = """身份：暂未设置具体画像
 
 USER_PROFILE_TEXT = _USER_PROFILE_TEXT or _DEFAULT_PROFILE_TEXT
 
-USER_PROFILE_PRIORITY = """筛选内容时请参考这个人的背景（这份背景由她本人通过问卷填写，请严格按照
+USER_PROFILE_PRIORITY = """筛选内容时请参考这个人的背景（这份背景由TA本人通过问卷填写，请严格按照
 里面写的关注领域和排除规则来筛选，不要脑补里面没提到的偏好）：
 
 {profile}
 
 {jargon_rule}""".format(profile=USER_PROFILE_TEXT, jargon_rule=NO_JARGON_RULE)
 
-USER_PROFILE_FULL = """这个人叫{name}，下面是她通过问卷填写的个人背景，请严格按照这份背景来理解她的
+USER_PROFILE_FULL = """这个人叫{name}，下面是TA通过问卷填写的个人背景，请严格按照这份背景来理解TA的
 身份、目标和偏好，不要预设、不要脑补背景里没提到的信息：
 
 {profile}
 
-她不喜欢空泛鼓励、鸡汤、模糊建议，喜欢直接分析问题、指出风险、给出判断和具体建议。
+TA不喜欢空泛鼓励、鸡汤、模糊建议，喜欢直接分析问题、指出风险、给出判断和具体建议。
 
 {jargon_rule}""".format(name=USER_NAME, profile=USER_PROFILE_TEXT, jargon_rule=NO_JARGON_RULE)
 
@@ -97,24 +97,24 @@ def generate_greeting(todo_hint, action_hint):
        而不是完全指望AI自己"想着要不一样"
     另外，之前漏了你要的两块内容：提醒今天该做的事、健康小知识（喝水之类），这次加上了。
     """
-    mood_rule = """现在是早上，写给刚起床准备开始一天的她。语气要像朋友一样自然温暖，
-提醒她看一眼今天的安排、准备开始行动。"""
+    mood_rule = """现在是早上，写给刚起床准备开始一天的TA。语气要像朋友一样自然温暖，
+提醒TA看一眼今天的安排、准备开始行动。"""
     health_pool = ["记得喝水", "起来活动一下、别久坐", "好好吃早饭", "让眼睛歇一歇别一直盯屏幕",
                    "做几个深呼吸调整状态", "有空开窗透透气、晒会儿太阳"]
 
     health_topic = random.choice(health_pool)
     tone_anchor = random.choice([
         "像刚聊完天顺口说一句的语气", "像发消息提醒朋友的语气", "简短利落，不要铺垫太多",
-        "带点俏皮但不浮夸", "平静温和，像很熟的朋友", "直接一点，像在催她赶紧行动",
+        "带点俏皮但不浮夸", "平静温和，像很熟的朋友", "直接一点，像在催TA赶紧行动",
     ])
 
-    prompt = f"""这个人叫{USER_NAME}。请你以"每日AI简报"这个AI助手的身份，给她写一段开头问候和一段结尾道别。
+    prompt = f"""这个人叫{USER_NAME}。请你以"每日AI简报"这个AI助手的身份，给TA写一段开头问候和一段结尾道别。
 
 {mood_rule}
 
 今天的问候要包含三个要素，自然揉在一起说，不要写成三条并列的清单：
 1. 提到"{USER_NAME}"这个名字
-2. 提醒她今天该做的事——参考下面"今日待办参考"里的内容，挑最值得提一句的说（不用照抄，用你自己的话说）
+2. 提醒TA今天该做的事——参考下面"今日待办参考"里的内容，挑最值得提一句的说（不用照抄，用你自己的话说）
 3. 带一句健康小提示，这次要提的方向是："{health_topic}"（用你自己的话自然说出来，不要生硬地copy这句话）
 
 今日待办参考：
@@ -189,7 +189,7 @@ def seen_block_text(seen_titles):
     """把已排除标题整理成给 AI 的提示语；没有就不加。"""
     if not seen_titles:
         return ""
-    lines = "\n".join(f"- {t}" for t in seen_titles[:40])
+    lines = "\n".join(f"- {t}" for t in seen_titles[:100])
     return ("另外，下面这些内容已经推送过了，即使换了标题、换了来源，"
             "只要讲的是同一件事就绝对不能再选：\n" + lines + "\n\n")
 
@@ -343,7 +343,7 @@ def get_top_picks(github_data, hn_data, rss_data, seen_titles=None):
 - 发生了什么：一句话说清楚具体是什么事
 - 处理情况：现在进展到哪一步（真的没提到就换候选，不要写占位词）
 - 原理科普：一句话说清楚背后的原理/技术是什么，用初中生能听懂的话
-- 对你的意义：结合她的AI PM求职方向和学生身份，给一句具体感受或启发
+- 对你的意义：结合上面的个人背景，给一句具体感受或启发
 
 {NO_RHETORIC_RULE}
 
@@ -429,13 +429,15 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
         return ""
 
     source_name = SUBCATEGORY_SOURCE_NAME.get(label, label)
-    lines = "\n".join([f"- [{source_name}] {x['title']} (链接: {x['url']})" for x in items])
+    # 新类别的条目自带 source（具体媒体名）和 summary（RSS摘要），旧类别没有，保持原有行为
+    has_source = any(x.get("source") for x in items)
+    lines = "\n".join([_format_item_line(x, source_name) for x in items])
     seen_block = seen_block_text(seen_titles)
 
     prompt = f"""下面是今天【{label}】类别的原始新闻标题（每条后面带了原文链接，行首方括号里是来源名，
 供你参考，不要写进标题）。请你：
 1. 严格挑出其中最值得关注、影响力最大的 {top_n} 条，不要超过这个数量
-2. 如果是英文，翻译成中文
+2. 如果不是简体中文（英文、意大利文、繁体中文等），翻译成简体中文
 {extra_rule}
 {seen_block}
 {NO_JARGON_RULE}
@@ -451,6 +453,9 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
 
 {NO_RHETORIC_RULE}
 
+事实要求：只能依据上面给出的标题和摘要来写，原文里没有的数字、人名、结论、原因一律不要编造；
+信息不够就换一条，或者直接不选。
+
 如果这批新闻里根本没有符合【{label}】主题的内容，直接返回空，不要硬选不相关的内容凑数。
 
 不要写多余的开场白。
@@ -459,7 +464,10 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
 {lines}
 """
     result = call_deepseek(prompt)
-    if result:
+    if result and has_source:
+        # 按链接反查每条的真实来源（Dezeen / CNBC / OpenAI ...），反查不到时用域名兜底
+        result = attach_source_to_lines(result, items)
+    elif result:
         result = "\n".join(
             f"{source_name}|||{line}" if "|||" in line else line
             for line in result.split("\n")
@@ -467,7 +475,102 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
     return result
 
 
-def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, politics_text, science_text):
+def _format_item_line(x, default_source):
+    """给AI看的一行候选：[来源] 标题｜日期｜摘要 (链接: ...)。摘要能减少AI只看标题就瞎猜的情况"""
+    src = x.get("source") or default_source
+    line = f"- [{src}] {x['title']}"
+    date = (x.get("published") or "")[:16]
+    if date:
+        line += f"｜{date}"
+    summary = x.get("summary")
+    if summary:
+        line += f"｜摘要：{summary}"
+    return f"{line} (链接: {x['url']})"
+
+
+def titles_from(text):
+    """从已生成的板块文本里取出标题（行格式：来源|||标题|||链接|||...），用来给后面的板块做去重参考"""
+    titles = []
+    for line in (text or "").split("\n"):
+        parts = [p.strip() for p in line.split("|||")]
+        if len(parts) >= 3 and parts[1]:
+            titles.append(parts[1])
+    return titles
+
+
+# ============ 新增板块：欧洲/意大利、设计、游戏、股市、国内政策、招聘、时尚、AI公司 ============
+# 每个板块：(板块key, 抓取脚本里的大类名, [(子类名, 选几条, 额外筛选规则)])
+# 额外规则从"3."开始编号（1、2 是通用规则）。想调整某个板块的口味，直接改这里的文字。
+WATCHLIST = os.environ.get("WATCHLIST", "").strip()  # 可选：你关注的公司/股票代码，逗号分隔
+_WATCH_RULE = f"\n5. 用户重点关注的公司/股票（相关消息优先选）：{WATCHLIST}" if WATCHLIST else ""
+
+NO_ADVICE_RULE = "只陈述事实，绝对不要给买入、卖出、持有建议，不要写目标价，也不要预测股价涨跌。"
+
+NEW_SECTIONS = [
+    ("ai_news", "AI公司", [
+        ("AI公司动态", 4,
+         "3. 只挑AI公司自己的重要发布或动向：新模型、产品功能、重大合作、融资、安全与政策声明。"
+         "教程类、客户案例类、纯评论类内容不要选"),
+    ]),
+    ("stocks", "股市", [
+        ("美股", 3,
+         "3. 只挑对美股大盘或大型上市公司有实质影响的消息（指数、利率、监管、重大公司事件）。\n"
+         f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
+        ("财报", 3,
+         "3. 只挑公司发布财报/业绩的新闻。标题或摘要里有的关键数字（营收、利润、同比、是否超预期、业绩指引）要写出来，"
+         "没有就不要编造数字；优先大型、知名的上市公司\n"
+         f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
+        ("港股", 2,
+         "3. 只挑港股、恒生指数或在港上市公司相关的消息（重要公告、融资、供股、业绩、监管）\n"
+         f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
+    ]),
+    ("games", "游戏", [
+        ("3A游戏资讯", 3,
+         "3. 只挑3A大作和大厂主机/PC游戏相关的资讯：新作公布、发售日期、重大更新、Steam 平台重要动态。"
+         "独立小游戏、折扣促销、攻略、设备优惠、评测汇总一律不要选"),
+        ("游戏公司", 2,
+         "3. 只挑游戏公司层面的新闻：财报、收购并购、裁员、工作室关闭、重大人事变动、行业政策。"
+         "单个游戏的更新补丁不要选"),
+    ]),
+    ("design", "设计", [
+        ("设计", 3,
+         "3. 优先挑有影响力的设计新闻：知名设计师/事务所/品牌的新作品、重要展览与设计周（如米兰设计周）、"
+         "设计行业动向、意大利设计。纯商品促销不要选"),
+    ]),
+    ("europe", "欧洲与意大利", [
+        ("欧盟", 2,
+         "3. 只挑欧盟层面的政策、立法、经济、外交新闻，成员国国内的琐碎新闻不要选"),
+        ("意大利", 2,
+         "3. 优先挑意大利的重要新闻：政治经济、社会事件、罗马相关、教育和留学生相关政策（签证、居留、学费）。"
+         "娱乐和体育小新闻不要选"),
+    ]),
+    ("china", "国内要闻与政策", [
+        ("国内要闻", 2, ""),
+        ("政策走向", 2,
+         "3. 只挑具体的政策发布、法规修订、部委或监管机构的动作、产业/就业/教育政策走向。"
+         "领导人活动报道、口号式宣传稿、纯文化稿件不要选\n"
+         "4. 一句话点评要点出：这个政策实际影响谁、有什么变化"),
+    ]),
+    ("jobs", "招聘", [
+        ("大公司招聘动态", 3,
+         "3. 只挑跟大公司招聘有关的新闻：校招/社招启动、扩招或缩招、裁员、薪资与岗位趋势、招聘要求变化。"
+         "优先腾讯、字节、阿里、华为、美团、小米及海外科技/游戏/设计相关大公司；很久以前的宣讲会通知不要选\n"
+         "4. 这里是招聘动态新闻，不是岗位列表，不要编造具体岗位或投递链接"),
+    ]),
+    ("fashion", "时尚", [
+        ("时尚品牌", 3,
+         "3. 只挑时尚品牌与行业的重要新闻：新系列/联名、创意总监更替、秀场、财报与并购、行业趋势。"
+         "明星红毯穿搭、购物清单、促销一律不要选"),
+    ]),
+]
+
+ALL_SECTION_KEYS = ["overview", "jwc", "top_picks", "tech",
+                    "economy", "politics", "science",
+                    *[k for k, _, _ in NEW_SECTIONS],
+                    "action", "greeting"]
+
+
+def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, politics_text, science_text, extra_text=""):
     """今日行动建议：结合用户画像+当天全部内容，方向和推荐动作必须是学生今天能做完的具体小事"""
     all_content = f"""教务网：
 {jwc_text}
@@ -486,6 +589,9 @@ def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, po
 
 科学突破：
 {science_text}
+
+其他板块（AI公司、股市、游戏、设计、欧洲意大利、国内政策、招聘、时尚）：
+{extra_text if extra_text else "无"}
 """
 
     prompt = f"""{USER_PROFILE_FULL}
@@ -501,17 +607,19 @@ def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, po
 格式：方向名称|||具体做法（20-30字，要具体到"打开什么、看什么、做什么"）
 
 【不建议投入】
-指出1个不值得现在投入时间的方向，并说明为什么（比如门槛太高、跟她当前阶段不匹配），
+指出1个不值得现在投入时间的方向，并说明为什么（比如门槛太高、跟TA当前阶段不匹配），
 1-2句话，不超过40字
 
 【今日推荐行动】
-从上面的方向里选1个，或者结合她的"观察→请教→复用"方法论，给一个她今天就能开始做的
+从上面的方向里选1个，或者结合TA的个人背景，给一个TA今天就能开始做的
 具体动作，必须具体到"打开什么、做什么、大概花多久"，不超过40字，不能是模糊的"了解一下"
 "关注一下"
 
 {NO_RHETORIC_RULE}
 
 不要写多余的开场白。
+
+补充限制：行动建议里不要出现买入、卖出具体股票或任何投资操作的建议。
 
 今天的简报内容：
 {all_content}
@@ -535,7 +643,7 @@ def summarize_overview(jwc_text, tech_text):
 【趋势预测】
 1-2句话，基于今天的信息，往前展望一步：接下来可能会怎样发展。
 {NO_JARGON_RULE}
-结合这个人的AI PM求职方向，这个趋势可能意味着什么值得准备的方向（不要用职场黑话）
+结合这个人的个人背景，这个趋势可能意味着什么值得关注的方向（不要用职场黑话）
 
 【今日最该做的一件事】
 如果教务网有"需要行动"的内容，从中挑最紧急的一条，一句话提醒（不超过20字）；如果没有，就写"今天没有紧急待办，可以轻松看资讯"
@@ -637,14 +745,43 @@ if __name__ == "__main__":
             sections["science"] = summarize_one_pick("科学突破", science_items, SCIENCE_TOP_N, science_rule, seen_titles=seen_titles)
             print(sections["science"] + "\n")
 
-    if sections.get("jwc") or sections.get("tech"):
+    # ---------- 新增板块：每个子类单独让AI挑，某一个失败不影响其他板块 ----------
+    if category_data:
+        dedupe = []  # 已经选过的标题，传给后面的板块，避免不同板块重复同一件事
+        for k in ("top_picks", "tech", "economy", "politics", "science"):
+            dedupe.extend(titles_from(sections.get(k, "")))
+        for key, category, subs in NEW_SECTIONS:
+            parts = []
+            for sub_label, top_n, rule in subs:
+                items = items_by_key.get((category, sub_label), [])
+                if not items:
+                    continue
+                print(f"正在筛选【{category}-{sub_label}】（目标{top_n}条）...")
+                try:
+                    result = summarize_one_pick(sub_label, items, top_n, rule, seen_titles=dedupe)
+                except Exception as e:
+                    print(f"  ⚠️ 【{sub_label}】生成失败，跳过：{e}")
+                    continue
+                if result:
+                    parts.append(result)
+                    dedupe.extend(titles_from(result))
+                    print(result + "\n")
+            sections[key] = "\n".join(parts)
+
+    # 其他板块的文字，给总览/行动建议参考
+    extra_text = "\n\n".join(
+        f"【{key}】\n{sections[key]}" for key, _, _ in NEW_SECTIONS if sections.get(key)
+    )
+    tech_for_overview = "\n".join(x for x in (sections.get("tech"), sections.get("ai_news")) if x) or "无"
+    has_content = any(sections.get(k) for k in ALL_SECTION_KEYS if k not in ("overview", "action", "greeting"))
+
+    if has_content:
         print("正在生成今日总览...")
         sections["overview"] = summarize_overview(
-            sections.get("jwc", "无"), sections.get("tech", "无")
+            sections.get("jwc", "无"), tech_for_overview
         )
         print(sections["overview"] + "\n")
 
-    if sections.get("tech") or sections.get("top_picks") or sections.get("jwc"):
         print("正在生成今日行动建议（学生视角，禁止职场黑话）...")
         sections["action"] = generate_action_advice(
             sections.get("jwc", "无"),
@@ -653,6 +790,7 @@ if __name__ == "__main__":
             sections.get("economy", "无"),
             sections.get("politics", "无"),
             sections.get("science", "无"),
+            extra_text,
         )
         print(sections["action"] + "\n")
 
@@ -666,23 +804,8 @@ if __name__ == "__main__":
     with open("daily_brief.md", "w", encoding="utf-8") as f:
         f.write(f"DATE|||{today}\n")
         f.write(f"SLOT|||{slot}\n")
-        f.write("SECTION|||overview\n")
-        f.write(sections.get("overview", "") + "\n")
-        f.write("SECTION|||jwc\n")
-        f.write(sections.get("jwc", "") + "\n")
-        f.write("SECTION|||top_picks\n")
-        f.write(sections.get("top_picks", "") + "\n")
-        f.write("SECTION|||tech\n")
-        f.write(sections.get("tech", "") + "\n")
-        f.write("SECTION|||economy\n")
-        f.write(sections.get("economy", "") + "\n")
-        f.write("SECTION|||politics\n")
-        f.write(sections.get("politics", "") + "\n")
-        f.write("SECTION|||science\n")
-        f.write(sections.get("science", "") + "\n")
-        f.write("SECTION|||action\n")
-        f.write(sections.get("action", "") + "\n")
-        f.write("SECTION|||greeting\n")
-        f.write(sections.get("greeting", "") + "\n")
+        for key in ALL_SECTION_KEYS:
+            f.write(f"SECTION|||{key}\n")
+            f.write(sections.get(key, "") + "\n")
 
     print("✅ 简报已生成：daily_brief.md")

@@ -33,4 +33,5 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           USER_NAME: ${{ secrets.USER_NAME }}
           USER_PROFILE_TEXT: ${{ secrets.USER_PROFILE_TEXT }}
+          WATCHLIST: ${{ secrets.WATCHLIST }}
         run: python run_all.py

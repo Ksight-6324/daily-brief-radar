@@ -31,7 +31,16 @@ COLOR_MUTED = "#8a95a3"
 COLOR_BG_ACCENT = "#eaf0f5"
 COLOR_BG_MUTED = "#f4f5f6"
 
+# 邮件里"科技资讯全览"之后依次显示的板块：(daily_brief.md 里的 key, 邮件标题)
 EXTRA_SECTIONS = [
+    ("ai_news", "🤖 AI公司动态"),
+    ("stocks", "📈 美股 · 港股 · 财报"),
+    ("games", "🎮 3A游戏与游戏公司"),
+    ("design", "🎨 设计"),
+    ("europe", "🇪🇺 欧盟 · 意大利"),
+    ("china", "🇨🇳 国内要闻与政策"),
+    ("jobs", "💼 大公司招聘动态"),
+    ("fashion", "👗 时尚品牌"),
     ("economy", "💰 经济"),
     ("politics", "🏛 政治"),
     ("science", "🔬 科学突破"),
@@ -53,7 +62,7 @@ def _split_line(line, min_parts):
 def parse_brief(content):
     date = ""
     slot = "morning"
-    keys = ["overview", "jwc", "top_picks", "tech", "economy", "politics", "science", "action", "greeting"]
+    keys = ["overview", "jwc", "top_picks", "tech", "action", "greeting"] + [k for k, _ in EXTRA_SECTIONS]
     sections = {k: "" for k in keys}
     current = None
     for line in content.split("\n"):
