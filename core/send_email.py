@@ -386,7 +386,3 @@ def send_brief_email():
 
 if __name__ == "__main__":
     send_brief_email()
-
-
-if __name__ == "__main__":
-    send_brief_email()
