@@ -9,6 +9,7 @@
 - `web/` 使用 FastAPI 和原生 HTML/CSS/JavaScript，承担订阅、确认、支付、偏好管理和退订入口。
 - 邮件服务商使用 Resend，支付使用支付宝方案 A，系统订单号写入 `out_trade_no`，支付成功以 RSA2 验签通过的异步通知为准。
 - `tests/` 保存自动化测试，`docs/implementation.md` 保存执行计划、决策、测试结果及交接记录。
+- `docs/subscription-operations.md` 保存账号配置、API／worker／scheduler 启动方式、人工验收和当前交付边界。
 - 现有个人版继续通过原有入口运行。订阅模式通过 `BRIEF_MODE=subscription` 启用，连接 `BRIEF_DB_PATH` 指定的持久数据库。
 
 ## 硬性规则
