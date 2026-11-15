@@ -43,6 +43,63 @@ function selectedPreferences(form) {
   );
 }
 
+function updateTopicCount(form) {
+  const total = form.querySelectorAll('input[name="preferences"]').length;
+  form.querySelector("[data-topic-count]").textContent =
+    `已选 ${selectedPreferences(form).length} / ${total}`;
+}
+
+async function loadOptions() {
+  const options = await api("/api/options");
+  for (const form of [byId("subscribe-form"), byId("preferences-form")]) {
+    const labels = options.topics.map((topic) => {
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.name = "preferences";
+      checkbox.value = topic.id;
+      label.append(checkbox, document.createTextNode(topic.label));
+      return label;
+    });
+    form.querySelector("[data-topics]").replaceChildren(...labels);
+    form.addEventListener("change", () => updateTopicCount(form));
+    for (const button of form.querySelectorAll("[data-topic-action]")) {
+      button.addEventListener("click", () => {
+        for (const checkbox of form.querySelectorAll(
+          'input[name="preferences"]',
+        )) {
+          checkbox.checked = button.dataset.topicAction === "all";
+        }
+        updateTopicCount(form);
+      });
+    }
+    form.querySelector('button[type="submit"]').disabled = false;
+    updateTopicCount(form);
+  }
+  for (const plan of options.plans) {
+    const amount = `¥${plan.amount / 100}`;
+    const card = document.createElement("article");
+    card.className = "plan";
+    const title = document.createElement("h3");
+    title.textContent = plan.label;
+    const price = document.createElement("p");
+    price.className = "price";
+    price.textContent = amount;
+    const duration = document.createElement("p");
+    duration.textContent = `${plan.days} 天 · 手动续费`;
+    const button = document.createElement("button");
+    button.className = "text-button";
+    button.dataset.plan = plan.id;
+    button.textContent = `选择${plan.label}`;
+    card.append(title, price, duration, button);
+    byId("plan-options").append(card);
+    const renewal = button.cloneNode(true);
+    renewal.className = "button secondary";
+    renewal.textContent = `${plan.label} ${amount}`;
+    byId("renewal-plan-options").append(renewal);
+  }
+}
+
 function showPanel(name) {
   for (const id of [
     "landing",
@@ -61,7 +118,7 @@ async function loadAccount() {
     let summary = `免费试读剩余 ${account.trial_remaining} 期。`;
     if (account.expires_at) {
       const expiry = new Date(account.expires_at);
-      summary = `订阅有效期至 ${expiry.toLocaleString("zh-CN", { timeZone: "Europe/Rome", dateStyle: "medium", timeStyle: "short" })}（罗马时间）。`;
+      summary = `订阅有效期至 ${expiry.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}（北京时间）。`;
     }
     if (account.status === "unsubscribed")
       summary += " 当前已停止接收，请回到首页重新申请并确认邮箱以恢复。";
@@ -74,6 +131,7 @@ async function loadAccount() {
     )) {
       input.checked = account.preferences.includes(input.value);
     }
+    updateTopicCount(byId("preferences-form"));
     return account;
   } catch (error) {
     feedback("management-feedback", error.message, true);
@@ -106,6 +164,7 @@ byId("subscribe-form").addEventListener("submit", async (event) => {
 byId("confirm-button").addEventListener("click", async () => {
   byId("confirm-button").disabled = true;
   try {
+    await optionsReady;
     const result = await api("/api/confirm", {
       method: "POST",
       body: JSON.stringify({ token: fragmentToken }),
@@ -141,51 +200,51 @@ byId("preferences-form").addEventListener("submit", async (event) => {
   }
 });
 
-for (const button of document.querySelectorAll("[data-plan]")) {
-  button.addEventListener("click", async () => {
-    if (!manageToken) {
-      byId("email").scrollIntoView({ block: "center" });
-      byId("email").focus({ preventScroll: true });
-      feedback(
-        "subscribe-feedback",
-        "请先填写邮箱并完成确认，再从邮件中的管理链接选择套餐。",
-      );
-      return;
-    }
-    showPanel("management-panel");
-    await loadAccount();
-    button.disabled = true;
-    feedback("management-feedback", "正在创建支付宝订单…");
-    try {
-      const order = await api("/api/orders", {
-        method: "POST",
-        body: JSON.stringify({ plan: button.dataset.plan }),
-      });
-      const qr = await fetch(
-        `/api/orders/${encodeURIComponent(order.order_token)}/qr`,
-        { headers: { Authorization: `Bearer ${manageToken}` } },
-      );
-      if (!qr.ok) throw new Error("收款码暂时无法显示，请重试。");
-      if (qrObjectUrl) URL.revokeObjectURL(qrObjectUrl);
-      qrObjectUrl = URL.createObjectURL(await qr.blob());
-      byId("payment-qr").src = qrObjectUrl;
-      byId("payment-amount").textContent =
-        `订单金额 ¥${(order.amount / 100).toFixed(2)}，收款码 30 分钟内有效。`;
-      byId("payment-link").href = order.payment_url;
-      byId("payment-panel").hidden = false;
-      byId("payment-status").textContent =
-        "请用支付宝扫码支付，完成后在这里自动确认。";
-      feedback("management-feedback", "订单已创建。");
-      byId("payment-panel").scrollIntoView({ block: "center" });
-      clearTimeout(pollingTimer);
-      pollPayment(order.order_token, Date.now() + 30 * 60 * 1000);
-    } catch (error) {
-      feedback("management-feedback", error.message, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-}
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-plan]");
+  if (!button) return;
+  if (!manageToken) {
+    byId("email").scrollIntoView({ block: "center" });
+    byId("email").focus({ preventScroll: true });
+    feedback(
+      "subscribe-feedback",
+      "请先填写邮箱并完成确认，再从邮件中的管理链接选择套餐。",
+    );
+    return;
+  }
+  showPanel("management-panel");
+  await loadAccount();
+  button.disabled = true;
+  feedback("management-feedback", "正在创建支付宝订单…");
+  try {
+    const order = await api("/api/orders", {
+      method: "POST",
+      body: JSON.stringify({ plan: button.dataset.plan }),
+    });
+    const qr = await fetch(
+      `/api/orders/${encodeURIComponent(order.order_token)}/qr`,
+      { headers: { Authorization: `Bearer ${manageToken}` } },
+    );
+    if (!qr.ok) throw new Error("收款码暂时无法显示，请重试。");
+    if (qrObjectUrl) URL.revokeObjectURL(qrObjectUrl);
+    qrObjectUrl = URL.createObjectURL(await qr.blob());
+    byId("payment-qr").src = qrObjectUrl;
+    byId("payment-amount").textContent =
+      `订单金额 ¥${(order.amount / 100).toFixed(2)}，收款码 30 分钟内有效。`;
+    byId("payment-link").href = order.payment_url;
+    byId("payment-panel").hidden = false;
+    byId("payment-status").textContent =
+      "请用支付宝扫码支付，完成后在这里自动确认。";
+    feedback("management-feedback", "订单已创建。");
+    byId("payment-panel").scrollIntoView({ block: "center" });
+    clearTimeout(pollingTimer);
+    pollPayment(order.order_token, Date.now() + 30 * 60 * 1000);
+  } catch (error) {
+    feedback("management-feedback", error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 function pollPayment(orderToken, until) {
   pollingTimer = setTimeout(async () => {
@@ -246,10 +305,20 @@ if (route === "/confirm") {
   }
 } else if (route === "/manage") {
   showPanel("management-panel");
-  loadAccount();
 } else if (route === "/unsubscribe") {
   showPanel("unsubscribe-panel");
 }
+
+const optionsReady = loadOptions();
+optionsReady
+  .then(() => {
+    if (route === "/manage") loadAccount();
+  })
+  .catch(() => {
+    const message = "主题与套餐暂时无法读取，请刷新后重试。";
+    feedback("subscribe-feedback", message, true);
+    feedback("management-feedback", message, true);
+  });
 
 window.addEventListener("pagehide", () => {
   clearTimeout(pollingTimer);

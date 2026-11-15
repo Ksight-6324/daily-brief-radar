@@ -108,7 +108,7 @@ nav a:hover {
   grid-template-columns: 1fr 1.03fr;
   gap: 70px;
   padding: 58px 0 54px;
-  align-items: start;
+  align-items: center;
 }
 h1,
 h2,
@@ -119,7 +119,7 @@ p {
 .intro-copy h1 {
   font-family: var(--serif);
   font-weight: 800;
-  font-size: clamp(48px, 5.2vw, 73px);
+  font-size: clamp(48px, 5.7vw, 82px);
   line-height: 1.24;
   letter-spacing: -2px;
   margin: 0 0 24px;
@@ -172,10 +172,86 @@ legend span {
   margin-left: 6px;
 }
 .preference-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  font-size: 16px;
+}
+.preference-options label {
+  min-height: 60px;
+  padding: 14px 20px;
+  background: #f7f9f5;
+  transition: background 0.15s;
+}
+.preference-options label:hover {
+  background: #e2ebdf;
+}
+.preference-options label:has(input:checked) {
+  background: #dbe7d8;
+  font-weight: 650;
+}
+.subscribe-section {
+  border-top: 1px solid var(--ink);
+  padding: 48px 0 36px;
+}
+.subscribe-section h2 {
+  font-family: var(--serif);
+  font-size: 42px;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+.section-description {
+  color: var(--muted);
+  margin-bottom: 26px;
+}
+.email-field {
+  max-width: 540px;
+}
+.subscribe-actions {
   display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  font-size: 14px;
+  align-items: center;
+  gap: 24px;
+}
+.subscribe-actions .form-note {
+  margin: 0;
+}
+.topic-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.topic-tools button {
+  border: 0;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--clay);
+  font-size: 13px;
+}
+.topic-tools button:hover {
+  text-decoration: underline;
+}
+.hero-action {
+  background: var(--clay);
+  color: var(--paper);
+  border-color: var(--clay);
+}
+.hero-action:hover {
+  background: #9f4f3b;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .preference-options label,
 .consent {
@@ -351,7 +427,7 @@ input[type="checkbox"] {
 }
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 .plan {
@@ -416,6 +492,9 @@ input[type="checkbox"] {
 .account-panel {
   max-width: 760px;
   margin: 64px auto 90px;
+}
+.account-panel .preference-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .account-panel h1 {
   font-family: var(--serif);
@@ -517,7 +596,10 @@ input[type="checkbox"] {
     font-size: 30px;
   }
   .preference-options {
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .plans-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .section-heading {
     display: block;
@@ -530,6 +612,31 @@ input[type="checkbox"] {
   }
 }
 @media (max-width: 720px) {
+  .preference-options,
+  .account-panel .preference-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preference-options label {
+    padding: 13px 12px;
+    min-height: 52px;
+  }
+  .preference-options label:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .subscribe-section {
+    padding-top: 30px;
+  }
+  .subscribe-section h2 {
+    font-size: 31px;
+  }
+  .section-description {
+    font-size: 14px;
+  }
+  .subscribe-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
   .site-shell {
     width: calc(100% - 36px);
   }
@@ -556,7 +663,7 @@ input[type="checkbox"] {
     padding: 34px 0;
   }
   .intro-copy h1 {
-    font-size: 59px;
+    font-size: clamp(46px, 13vw, 59px);
     line-height: 1.2;
     letter-spacing: -1.5px;
     margin-bottom: 20px;
@@ -585,7 +692,7 @@ input[type="checkbox"] {
     padding-top: 16px;
   }
   .section-heading h2 {
-    font-size: 30px;
+    font-size: clamp(24px, 8.5vw, 30px);
   }
   .plans-grid {
     grid-template-columns: 1fr;
@@ -639,6 +746,15 @@ input[type="checkbox"] {
   }
   .unsubscribe-actions {
     flex-direction: column;
+  }
+}
+@media (max-width: 360px) {
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  nav {
+    align-self: flex-end;
   }
 }
 @media (prefers-reduced-motion: reduce) {

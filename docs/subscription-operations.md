@@ -2,9 +2,9 @@
 
 ## 当前实现
 
-订阅版沿用 Python 采集与摘要，使用 FastAPI、原生网页、SQLite、支付宝当面付和 Resend。数据与发送任务保存在共享持久数据库，生成器按期冻结三板块内容。
+订阅版沿用 Python 采集与摘要，使用 FastAPI、原生网页、SQLite、支付宝当面付和 Resend。数据与发送任务保存在共享持久数据库，生成器按日期及早／晚版次冻结有可用来源的主题内容。
 
-本次默认启用股票经济、人工智能、就业机会。每天罗马时间 12 点开始发布，免费试读三期，宽限三天。月付 9.9 元对应 30 天，季付 29 元对应 90 天，年付 99 元对应 365 天，按 UTC 时长计算。
+网页提供全部 15 个主题，支持零至全部选择、全选与清空，偏好影响排序。每天北京时间 08:00 发布早报、20:00 发布晚报，使用 Asia/Shanghai。免费试读三封，每封成功提交给服务商后计一次，宽限三天。周付 3 元对应 7 天，月付 9.9 元对应 30 天，季付 29 元对应 90 天，年付 99 元对应 365 天，按 UTC 时长计算。
 
 ## 本地准备
 
@@ -44,6 +44,8 @@ Copy-Item .env.example .env
 python -m subscription.cli init
 ```
 
+已有 v1 数据库会在启动时自动事务升级到 v2。升级前停止旧版进程并备份数据库及令牌密钥，再启动新版 API、worker 和 scheduler。升级保留订单、有效期、偏好及历史快照，将旧快照标记为 legacy。旧日报的 pending／failed 任务转 skipped，sending 转 needs_review，需核对服务商记录。新期号分别使用 `YYYY-MM-DD/morning` 和 `YYYY-MM-DD/evening`。
+
 三个终端均在仓库根目录、相同虚拟环境运行。
 
 ```powershell
@@ -53,13 +55,13 @@ python -m uvicorn web.app:create_app --factory --host 127.0.0.1 --port 8000 --no
 # 终端二，发送 worker
 python -m subscription.cli worker --watch
 
-# 终端三，每分钟扫描，午间之后恢复当天任务
+# 终端三，每分钟扫描，恢复当前早／晚报窗口的任务
 python -m subscription.cli schedule --watch
 ```
 
 打开 `http://127.0.0.1:8000`。正式上线时由反向代理提供 HTTPS，并通过进程管理器守护上述进程。one-click 退订请求的查询参数含管理凭证，代理访问日志应隐藏查询参数。
 
-调度器每天罗马时间 12 点之后检查当天快照。缺少时调用现有 `run_all.py` 订阅入口，采集三板块候选并生成快照。已有快照直接扫描入队。失败五分钟后重试，当天恢复后会补扫。
+调度器在北京时间 08:00 至 20:00 前检查当天早报，在 20:00 至次日零点前检查当天晚报。缺少时调用现有 `run_all.py` 订阅入口，采集各主题候选并生成快照，已有快照直接扫描入队。失败五分钟后重试，在当前窗口恢复时补扫。跨入晚报窗口后生成晚报，早报已经入队的任务仍按原期号重试。生成和队列处理耗时会影响最终到达邮箱的时间。
 
 ## 人工执行命令
 
@@ -67,11 +69,12 @@ python -m subscription.cli schedule --watch
 # 申请确认邮件，需由收件人完成确认
 python -m subscription.cli register you@example.com --preferences markets,ai
 
-# 当天采集、生成、冻结和入队
+# 按北京时间当前窗口采集、生成、冻结和入队
 python run_all.py
 
-# 已有 daily_brief.md 时手动冻结与入队
-python -m subscription.cli publish
+# 已有 daily_brief.md 时按其 SLOT 手动冻结与入队
+python -m subscription.cli --edition morning publish
+# 晚报使用 --edition evening
 
 # 扫描已有当天快照及续费提醒
 python -m subscription.cli scan
@@ -83,15 +86,15 @@ python -m subscription.cli worker --once
 python -m subscription.cli status
 ```
 
-`daily_brief.md` 必须有罗马当天的 `DATE|||YYYY-MM-DD`，以及 `markets`、`ai_feeds` 或 `ai_tech`、`jobs` 三个 `SECTION`。每条采用现有六字段格式 `来源|||标题|||链接|||标签|||摘要|||为什么重要`。
+`daily_brief.md` 必须有北京当天的 `DATE|||YYYY-MM-DD`，以及 `SLOT|||morning` 或 `SLOT|||evening`。`SECTION` 使用 `subscription/store.py` 中的主题键，至少有一个有效主题，每条采用现有六字段格式 `来源|||标题|||链接|||标签|||摘要|||为什么重要`。支持已有的 `ai_feeds`、`ai_tech` 和 `history_news` 别名，以及旧版 `noon` 输入。显式早晚版次冲突会拒绝发布。
 
-快照冻结后禁止覆盖。后续所有用户及失败重试使用同一期快照，偏好仅调整板块排序。当前按收件人提交独立 outbox 任务，保留个人管理链接与幂等键。分组批量投递属于后续扩展。邮件中的其他板块保留在“其他值得一扫”区域。
+快照冻结后禁止覆盖。后续所有用户及失败重试使用同一期快照，偏好仅调整板块排序。当前按收件人提交独立 outbox 任务，保留个人管理链接与幂等键。分组批量投递属于后续扩展。邮件前三条主展示，其余保留在“其他值得一扫”折叠区，纯文本包含全部可用主题。折叠显示效果需在目标邮件客户端验收。
 
 ## 支付验收
 
 1. 配置支付宝当面付应用、公钥和商户信息，网站使用可访问的 HTTPS 域名。
 2. 异步通知地址为 `https://你的域名/api/payments/alipay/notify`，由预下单请求携带。
-3. 从确认邮件进入管理页，创建套餐订单。系统把订单号写入 `out_trade_no`，保存支付宝收款 URL 并生成真实二维码。
+3. 从确认邮件进入管理页，创建套餐订单。核验周付实付为 3.00 元，支付成功增加 7 天。系统把订单号写入 `out_trade_no`，保存支付宝收款 URL 并生成真实二维码。
 4. 验签后的成功通知检查应用、收款方、金额与唯一交易流水，在同一事务更新订单和订阅。重复通知应得到 `success`，到期时间保持一致。
 5. 无法匹配的已验签交易保存在 `orders.status='unmatched'`。每周核对处理并保留支付审计记录。
 
@@ -113,12 +116,12 @@ worker 在最终资格检查及 HTTP 请求期间持有 SQLite 写锁，请求�
 
 ```powershell
 python -m unittest discover -s tests -v
-python -m compileall -q subscription web tests
+python -m compileall -q subscription web tests fetchers/fetch_category_news.py
 node --check web/static/app.js
 git diff --check
 ```
 
-自动化测试使用临时 SQLite、本地 HTTP 邮件替身及临时 RSA 密钥，覆盖真实 CLI/API、签名验证、交易幂等、并发续费、快照、重试、租约恢复、试读与退订。
+自动化测试使用临时 SQLite、本地 HTTP 邮件替身及临时 RSA 密钥，覆盖真实 CLI/API、签名验证、周付金额与期限、交易幂等、并发续费、快照、重试、租约恢复、试读与退订、全部主题、北京时间早晚窗口及事务迁移回滚。
 
 浏览器验收覆盖桌面 1440 像素、手机 390 像素、窄屏 320 像素，以及申请、显式确认、管理、偏好、通用版和退订。首页新闻卡片明确标记为结构预览。真实 AI 采集质量、支付宝沙箱与生产收款、Resend 实际收件箱送达和公网部署需要相应账号与基础设施后继续验收。
 

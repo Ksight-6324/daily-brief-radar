@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="每天一封三分钟文字简报，关注股票经济、人工智能与就业机会。主动确认订阅，随时退订。"
+      content="北京时间每天早八点、晚八点各一封文字简报。15 个主题自由选择，周付 3 元，主动确认订阅，随时退订。"
     />
     <meta name="theme-color" content="#edf2eb" />
     <title>Daily Brief Radar · 把今天的世界补全</title>
@@ -31,68 +31,10 @@
             <div class="intro-copy">
               <h1 id="headline">花三分钟，<br />把今天的<br />世界补全。</h1>
               <p class="intro-description">
-                从股票经济的变化，到人工智能的进展，再到就业市场的机会。用一封文字简报，把值得知道的事读明白。
+                每天早晚，用文字简报读懂值得关注的事。
               </p>
-              <p class="delivery-time">每日一封 · 罗马时间 12 点</p>
-              <form id="subscribe-form">
-                <label class="field-label" for="email">邮箱地址</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="you@example.com"
-                  maxlength="254"
-                  required
-                />
-                <fieldset>
-                  <legend>关注的主题 <span>可多选，影响内容排序</span></legend>
-                  <div class="preference-options">
-                    <label
-                      ><input
-                        name="preferences"
-                        type="checkbox"
-                        value="markets"
-                      />股票经济</label
-                    >
-                    <label
-                      ><input
-                        name="preferences"
-                        type="checkbox"
-                        value="ai"
-                      />人工智能</label
-                    >
-                    <label
-                      ><input
-                        name="preferences"
-                        type="checkbox"
-                        value="jobs"
-                      />就业机会</label
-                    >
-                  </div>
-                </fieldset>
-                <label class="consent"
-                  ><input id="consent" type="checkbox" required /><span
-                    >我同意通过此邮箱接收每日简报，并了解所选偏好用于调整内容排序。可以随时退订。</span
-                  ></label
-                >
-                <button
-                  class="button primary"
-                  id="subscribe-button"
-                  type="submit"
-                >
-                  免费试读 3 期 <span aria-hidden="true">↗</span>
-                </button>
-                <p class="form-note">
-                  确认邮箱后开始试读。留空兴趣选项，即接收通用版。
-                </p>
-                <p
-                  id="subscribe-feedback"
-                  class="feedback"
-                  role="status"
-                  aria-live="polite"
-                ></p>
-              </form>
+              <p class="delivery-time">北京时间 08:00 / 20:00 · 每日两封</p>
+              <a class="button hero-action" href="#subscribe">选择关注主题</a>
             </div>
 
             <article
@@ -134,6 +76,72 @@
           </section>
 
           <section
+            id="subscribe"
+            class="subscribe-section"
+            aria-labelledby="subscribe-heading"
+          >
+            <h2 id="subscribe-heading">选择你关注的主题</h2>
+            <p class="section-description">
+              可选任意数量，仅影响内容排序。留空接收通用版。
+            </p>
+            <form id="subscribe-form">
+              <div class="email-field">
+                <label class="field-label" for="email">邮箱地址</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder="you@example.com"
+                  maxlength="254"
+                  required
+                />
+              </div>
+              <fieldset>
+                <legend class="visually-hidden">
+                  关注的主题，可选任意数量
+                </legend>
+                <div class="preference-options" data-topics></div>
+                <div class="topic-tools">
+                  <span data-topic-count role="status" aria-live="polite"
+                    >正在读取主题…</span
+                  >
+                  <div>
+                    <button type="button" data-topic-action="all">全选</button
+                    ><button type="button" data-topic-action="clear">
+                      清空
+                    </button>
+                  </div>
+                </div>
+              </fieldset>
+              <label class="consent"
+                ><input id="consent" type="checkbox" required /><span
+                  >我同意通过此邮箱接收每日简报，并了解所选偏好用于调整内容排序。可以随时退订。</span
+                ></label
+              >
+              <div class="subscribe-actions">
+                <button
+                  class="button primary compact"
+                  id="subscribe-button"
+                  type="submit"
+                  disabled
+                >
+                  免费试读 3 期
+                </button>
+                <p class="form-note">
+                  确认邮箱后开始试读。每天两封，试读按邮件期数计算。
+                </p>
+              </div>
+              <p
+                id="subscribe-feedback"
+                class="feedback"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </form>
+          </section>
+
+          <section
             id="plans"
             class="plans-section"
             aria-labelledby="plans-heading"
@@ -142,32 +150,7 @@
               <h2 id="plans-heading">一份简报，一个价格。</h2>
               <p>选择周期，手动续费。兴趣选择保持同价。</p>
             </div>
-            <div class="plans-grid">
-              <article class="plan">
-                <h3>月付</h3>
-                <p class="price"><span>¥</span>9.9</p>
-                <p>30 天 · 手动续费</p>
-                <button class="text-button" data-plan="monthly">
-                  选择月付 <span aria-hidden="true">↗</span>
-                </button>
-              </article>
-              <article class="plan">
-                <h3>季付</h3>
-                <p class="price"><span>¥</span>29</p>
-                <p>90 天 · 手动续费</p>
-                <button class="text-button" data-plan="quarterly">
-                  选择季付 <span aria-hidden="true">↗</span>
-                </button>
-              </article>
-              <article class="plan">
-                <h3>年付</h3>
-                <p class="price"><span>¥</span>99</p>
-                <p>365 天 · 手动续费</p>
-                <button class="text-button" data-plan="annual">
-                  选择年付 <span aria-hidden="true">↗</span>
-                </button>
-              </article>
-            </div>
+            <div id="plan-options" class="plans-grid"></div>
           </section>
         </div>
 
@@ -179,7 +162,10 @@
         >
           <p class="panel-context">邮箱确认</p>
           <h1 id="confirmation-heading">开始你的三期试读。</h1>
-          <p>确认后，每天收到一封简报。你可以随时调整排序，或停止接收邮件。</p>
+          <p>
+            确认后，北京时间每天 08:00 和 20:00
+            各收到一封简报。你可以随时调整排序，或停止接收邮件。
+          </p>
           <button id="confirm-button" class="button primary">
             确认邮箱并开始试读
           </button>
@@ -202,31 +188,20 @@
             <fieldset>
               <legend>调整你的阅读顺序</legend>
               <p class="form-note">
-                选中的主题排在前面。取消全部选择，可接收通用版。
+                可选任意数量，选中的主题排在前面。取消全部选择，可接收通用版。
               </p>
-              <div class="preference-options">
-                <label
-                  ><input
-                    name="preferences"
-                    type="checkbox"
-                    value="markets"
-                  />股票经济</label
-                ><label
-                  ><input
-                    name="preferences"
-                    type="checkbox"
-                    value="ai"
-                  />人工智能</label
-                ><label
-                  ><input
-                    name="preferences"
-                    type="checkbox"
-                    value="jobs"
-                  />就业机会</label
+              <div class="preference-options" data-topics></div>
+              <div class="topic-tools">
+                <span data-topic-count role="status" aria-live="polite"
+                  >正在读取主题…</span
                 >
+                <div>
+                  <button type="button" data-topic-action="all">全选</button
+                  ><button type="button" data-topic-action="clear">清空</button>
+                </div>
               </div>
             </fieldset>
-            <button class="button primary compact" type="submit">
+            <button class="button primary compact" type="submit" disabled>
               保存偏好
             </button>
           </form>
@@ -234,15 +209,7 @@
           <div class="renewal-options">
             <h2>选择续费周期</h2>
             <p>提前续费保留剩余天数。到期后有三天宽限期。</p>
-            <div class="renewal-buttons">
-              <button class="button secondary" data-plan="monthly">
-                月付 ¥9.9</button
-              ><button class="button secondary" data-plan="quarterly">
-                季付 ¥29</button
-              ><button class="button secondary" data-plan="annual">
-                年付 ¥99
-              </button>
-            </div>
+            <div id="renewal-plan-options" class="renewal-buttons"></div>
           </div>
           <section id="payment-panel" hidden aria-labelledby="payment-heading">
             <h2 id="payment-heading">用支付宝完成支付</h2>
