@@ -86,7 +86,83 @@ TA不喜欢空泛鼓励、鸡汤、模糊建议，喜欢直接分析问题、指
 
 {jargon_rule}""".format(name=USER_NAME, profile=USER_PROFILE_TEXT, jargon_rule=NO_JARGON_RULE)
 
-def generate_greeting(todo_hint, action_hint):
+SLOT_LABELS = {"noon": "午间", "evening": "晚间"}
+
+# ============ 已推送记录：避免午间和晚间两封简报重复同样的内容 ============
+SEEN_FILE = "seen_items.json"
+SEEN_KEEP_DAYS = 14      # 记录保留多少天（RSS 里的旧文章早就滚出去了，不用存太久）
+SEEN_MAX_ITEMS = 2000
+SEEN_TITLES_HOURS = 36   # 最近多少小时内推送过的标题，会传给 AI 做"同一件事不要重复"的参考
+
+
+def rome_now():
+    """罗马当前时间（自动处理夏令时）。取不到时区数据时退回到 UTC+1。"""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Rome"))
+    except Exception:
+        from datetime import timezone, timedelta
+        return datetime.now(timezone(timedelta(hours=1)))
+
+
+def detect_slot(now):
+    """17 点以前算午间简报，之后算晚间简报"""
+    return "noon" if now.hour < 17 else "evening"
+
+
+def load_seen(now):
+    """读取已推送记录，返回 (已推送链接集合, 最近推送过的标题列表, 原始记录列表)"""
+    from datetime import timedelta
+    try:
+        with open(SEEN_FILE, "r", encoding="utf-8") as f:
+            records = json.load(f).get("items", [])
+    except (FileNotFoundError, ValueError):
+        records = []
+
+    kept = []
+    for r in records:
+        try:
+            ts = datetime.fromisoformat(r["ts"])
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=now.tzinfo)
+        except Exception:
+            continue
+        if now - ts <= timedelta(days=SEEN_KEEP_DAYS):
+            kept.append({**r, "_ts": ts})
+
+    urls = {r["url"] for r in kept if r.get("url")}
+    recent = sorted((r for r in kept if now - r["_ts"] <= timedelta(hours=SEEN_TITLES_HOURS)),
+                    key=lambda r: r["_ts"], reverse=True)
+    titles = [r["title"] for r in recent if r.get("title")]
+    records = [{k: v for k, v in r.items() if k != "_ts"} for r in kept]
+    return urls, titles, records
+
+
+def save_seen(records, sections, now):
+    """把这次简报里出现的文章链接和标题追加进记录，供下一次去重"""
+    new = []
+    for key, text in sections.items():
+        if key in ("overview", "action", "greeting"):
+            continue
+        for line in (text or "").split("\n"):
+            parts = [p.strip() for p in line.split("|||")]
+            # 卡片行：来源|||标题|||链接|||...；教务行：标题|||链接|||说明（没有来源）
+            if len(parts) >= 3 and parts[2].startswith("http"):
+                new.append({"url": parts[2], "title": parts[1], "ts": now.isoformat()})
+            elif len(parts) >= 2 and parts[1].startswith("http"):
+                new.append({"url": parts[1], "title": parts[0], "ts": now.isoformat()})
+    have = {r["url"] for r in records}
+    for n in new:
+        if n["url"] not in have:
+            records.append(n)
+            have.add(n["url"])
+    records = records[-SEEN_MAX_ITEMS:]
+    with open(SEEN_FILE, "w", encoding="utf-8") as f:
+        json.dump({"items": records}, f, ensure_ascii=False, indent=1)
+    print(f"已记录 {len(new)} 条本次推送内容到 {SEEN_FILE}（共 {len(records)} 条）")
+
+
+def generate_greeting(todo_hint, action_hint, slot="noon"):
     """生成开头问候语+结尾结束语。
 
     【本次修复】之前问候语天天都差不多，原因有两个：
@@ -97,10 +173,16 @@ def generate_greeting(todo_hint, action_hint):
        而不是完全指望AI自己"想着要不一样"
     另外，之前漏了你要的两块内容：提醒今天该做的事、健康小知识（喝水之类），这次加上了。
     """
-    mood_rule = """现在是早上，写给刚起床准备开始一天的TA。语气要像朋友一样自然温暖，
-提醒TA看一眼今天的安排、准备开始行动。"""
-    health_pool = ["记得喝水", "起来活动一下、别久坐", "好好吃早饭", "让眼睛歇一歇别一直盯屏幕",
-                   "做几个深呼吸调整状态", "有空开窗透透气、晒会儿太阳"]
+    if slot == "evening":
+        mood_rule = """现在是罗马时间的晚上，写给一天快结束的TA。语气放松自然，像朋友一样，
+提醒TA花几分钟看完今晚的内容，做完一件小事就可以放松休息了。"""
+        health_pool = ["记得喝水", "站起来拉伸一下肩颈", "让眼睛歇一歇别一直盯屏幕",
+                       "睡前少刷一会儿手机", "做几个深呼吸放松下来", "早点休息别熬夜"]
+    else:
+        mood_rule = """现在是罗马时间的中午，写给午饭前后的TA。语气要像朋友一样自然温暖，
+提醒TA看一眼今天的内容、午后有空可以做的小事。"""
+        health_pool = ["记得喝水", "起来活动一下、别久坐", "好好吃午饭", "让眼睛歇一歇别一直盯屏幕",
+                       "做几个深呼吸调整状态", "有空开窗透透气、晒会儿太阳"]
 
     health_topic = random.choice(health_pool)
     tone_anchor = random.choice([
@@ -660,14 +742,16 @@ def summarize_overview(jwc_text, tech_text):
 
 
 if __name__ == "__main__":
-    slot = "morning"
-    print("正在生成今日早间简报...\n")
+    now = rome_now()
+    slot = detect_slot(now)
+    print(f"正在生成罗马时间 {now:%Y-%m-%d %H:%M} 的{SLOT_LABELS[slot]}简报...\n")
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = now.strftime("%Y-%m-%d")
     sections = {}
 
-    seen_urls = set()
-    seen_titles = []
+    # 之前推送过的内容：链接用来在候选里直接剔除，标题传给 AI 避免"换个来源讲同一件事"
+    seen_urls, seen_titles, seen_records = load_seen(now)
+    print(f"已推送记录：{len(seen_urls)} 条链接，其中最近 {SEEN_TITLES_HOURS} 小时 {len(seen_titles)} 条标题\n")
 
     jwc_data = load_json("jwc_news.json")
     if jwc_data:
@@ -747,7 +831,7 @@ if __name__ == "__main__":
 
     # ---------- 新增板块：每个子类单独让AI挑，某一个失败不影响其他板块 ----------
     if category_data:
-        dedupe = []  # 已经选过的标题，传给后面的板块，避免不同板块重复同一件事
+        dedupe = list(seen_titles)  # 之前推送过的 + 本次已选的标题，避免不同板块/不同时段重复同一件事
         for k in ("top_picks", "tech", "economy", "politics", "science"):
             dedupe.extend(titles_from(sections.get(k, "")))
         for key, category, subs in NEW_SECTIONS:
@@ -794,10 +878,11 @@ if __name__ == "__main__":
         )
         print(sections["action"] + "\n")
 
-    print("正在生成早间问候语...")
+    print(f"正在生成{SLOT_LABELS[slot]}问候语...")
     sections["greeting"] = generate_greeting(
         sections.get("overview", "（今天没有总览内容）"),
         sections.get("action", "（今天没有行动建议）"),
+        slot,
     )
     print(sections["greeting"] + "\n")
 
@@ -809,3 +894,7 @@ if __name__ == "__main__":
             f.write(sections.get(key, "") + "\n")
 
     print("✅ 简报已生成：daily_brief.md")
+
+    # 记录本次推送内容。注意：这里只写本地文件；工作流只有在邮件发送成功之后才会把它提交回仓库，
+    # 所以邮件发送失败的话，这些内容不会被当成"已推送"，下一次还会再选。
+    save_seen(seen_records, sections, now)

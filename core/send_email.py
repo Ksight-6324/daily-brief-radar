@@ -31,6 +31,10 @@ COLOR_MUTED = "#8a95a3"
 COLOR_BG_ACCENT = "#eaf0f5"
 COLOR_BG_MUTED = "#f4f5f6"
 
+# 简报时段（由 summarize.py 按罗马时间判断后写入 daily_brief.md）
+SLOT_GREETING = {"noon": "午安", "evening": "晚上好", "morning": "早安"}
+SLOT_TAG = {"noon": "午报", "evening": "晚报", "morning": "早报"}
+
 # 邮件里"科技资讯全览"之后依次显示的板块：(daily_brief.md 里的 key, 邮件标题)
 EXTRA_SECTIONS = [
     ("ai_news", "🤖 AI公司动态"),
@@ -300,7 +304,7 @@ def build_html(date, slot, sections):
     action_html = render_action_advice(sections.get("action", ""))
     opening, closing = render_greeting(sections.get("greeting", ""))
 
-    opening_html = f'''<div style="font-size:15px; color:{COLOR_DARK}; background:{COLOR_BG_ACCENT}; border-radius:8px; padding:14px 18px; margin-bottom:16px; line-height:1.6;">早安👋 {opening}</div>''' if opening else ""
+    opening_html = f'''<div style="font-size:15px; color:{COLOR_DARK}; background:{COLOR_BG_ACCENT}; border-radius:8px; padding:14px 18px; margin-bottom:16px; line-height:1.6;">{SLOT_GREETING.get(slot, "你好")}👋 {opening}</div>''' if opening else ""
     closing_in_footer = f'''<div style="font-size:15px; font-weight:600; color:{COLOR_DARK}; margin-top:12px; border-top:1px solid rgba(63,107,143,0.25); padding-top:12px; line-height:1.6;">💌 {closing}</div>''' if closing else ""
 
     has_jwc = bool(jwc_html.strip())
@@ -361,7 +365,7 @@ def send_brief_email():
     date, slot, sections = parse_brief(content)
     html_content = build_html(date, slot, sections)
 
-    slot_tag = "早报"
+    slot_tag = SLOT_TAG.get(slot, "简报")
     msg = MIMEText(html_content, "html", "utf-8")
     msg["From"] = QQ_EMAIL
     msg["To"] = SEND_TO

@@ -4,3 +4,6 @@ __pycache__/
 # 抓取产生的中间数据和生成的简报，不需要进版本库
 *.json
 daily_brief.md
+
+# 已推送记录需要保存进仓库（工作流会自动提交它）
+!seen_items.json

@@ -1,7 +1,7 @@
 ﻿"""
 一键运行：依次执行抓取 → AI摘要 → 发送简报邮件
 
-每天运行一次早间简报。
+每天在罗马时间午间和晚间各运行一次。
 
 用法：python run_all.py
 """
@@ -51,7 +51,7 @@ for step in steps:
         break
 
 if all_ok:
-    print("\n✅ 全部完成！早间简报已生成并发送")
+    print("\n✅ 全部完成！简报已生成并发送")
 else:
       sys.exit(1)
   

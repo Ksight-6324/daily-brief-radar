@@ -2,10 +2,23 @@ name: 每日AI简报
 
 on:
   schedule:
-    # 注意：GitHub Actions 的 cron 是 UTC 时间，北京时间 = UTC + 8
-    # 每天北京时间早上 07:30（UTC 前一天 23:30）运行一次。
-    - cron: '30 23 * * *'
+    # GitHub Actions 的 cron 只认 UTC，而罗马有夏令时（冬季 UTC+1，夏季 UTC+2）。
+    # 做法：每个目标时间写两条 cron（对应冬/夏令时），运行时用 Europe/Rome 实际偏移判断
+    # 哪一条是"对的"，另一条自动跳过。这样全年都是罗马时间 12:00 和 21:30。
+    - cron: '0 10 * * *'    # 罗马 12:00（夏令时 UTC+2）
+    - cron: '0 11 * * *'    # 罗马 12:00（冬令时 UTC+1）
+    - cron: '30 19 * * *'   # 罗马 21:30（夏令时 UTC+2）
+    - cron: '30 20 * * *'   # 罗马 21:30（冬令时 UTC+1）
   workflow_dispatch:        # 允许你在 GitHub 网页上手动点按钮触发，方便测试
+
+# 需要写权限：运行结束后把"已推送记录"（seen_items.json）提交回仓库，避免午间/晚间重复推送
+permissions:
+  contents: write
+
+# 同一时间只跑一个，避免两次运行互相覆盖记录
+concurrency:
+  group: daily-brief
+  cancel-in-progress: false
 
 jobs:
   run-brief:
@@ -23,7 +36,7 @@ jobs:
       - name: 安装依赖
         run: pip install -r requirements.txt
 
-      - name: 运行早间简报
+      - name: 运行简报
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
@@ -34,4 +47,33 @@ jobs:
           USER_NAME: ${{ secrets.USER_NAME }}
           USER_PROFILE_TEXT: ${{ secrets.USER_PROFILE_TEXT }}
           WATCHLIST: ${{ secrets.WATCHLIST }}
-        run: python run_all.py
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          # 手动触发（workflow_dispatch）不受时间判断影响，随时可以测试。
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            ROME_OFFSET=$(TZ=Europe/Rome date +%z)
+            case "$SCHEDULE_CRON" in
+              '0 10 * * *'|'30 19 * * *') WANT='+0200' ;;   # 夏令时那两条
+              *) WANT='+0100' ;;                            # 冬令时那两条
+            esac
+            if [ "$ROME_OFFSET" != "$WANT" ]; then
+              echo "当前罗马时区偏移 $ROME_OFFSET，这条 cron（$SCHEDULE_CRON）适用于 $WANT，跳过。"
+              exit 0
+            fi
+          fi
+          python run_all.py
+
+      - name: 保存已推送记录
+        # 失败也不影响简报本身（邮件已发出），只是下一次可能有少量重复
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f seen_items.json ]; then git add seen_items.json; fi
+          if git diff --cached --quiet; then
+            echo "没有新的已推送记录"
+          else
+            git commit -m "chore: update seen items"
+            git pull --rebase origin main
+            git push origin main
+          fi
