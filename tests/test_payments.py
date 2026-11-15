@@ -5,10 +5,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from subscription.payments import Alipay
-from tests.test_subscription import NOW, StoreTest
+from tests.support import NOW, StoreCase
 
 
-class PaymentTest(StoreTest):
+class PaymentTest(StoreCase):
     def setUp(self):
         super().setUp()
         self.private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -49,7 +49,7 @@ class PaymentTest(StoreTest):
             self.provider.notify(notification, NOW)
         self.assertIsNone(self.store.subscription(account["id"]))
 
-    def test_precreate_request_has_signed_order_and_validated_response(self):
+    def test_precreate_request_carries_signed_order_and_amount(self):
         account = self.subscriber()
         order = self.store.create_order(account["id"], "monthly", NOW)
         params = self.provider.precreate_parameters(order, NOW)

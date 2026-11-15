@@ -45,12 +45,15 @@ class Store:
             raise ValueError("BRIEF_TOKEN_SECRET 至少 32 个字符")
         if not secret:
             key_path = self.path.with_suffix(self.path.suffix + ".key")
+            temporary_key = key_path.with_name(key_path.name + "." + uuid4().hex)
+            temporary_key.write_text(secrets.token_hex(32), encoding="ascii")
+            os.chmod(temporary_key, 0o600)
             try:
-                with key_path.open("x", encoding="ascii") as handle:
-                    os.chmod(key_path, 0o600)
-                    handle.write(secrets.token_hex(32))
+                os.link(temporary_key, key_path)
             except FileExistsError:
                 pass
+            finally:
+                temporary_key.unlink()
             secret = key_path.read_text(encoding="ascii")
         self.secret = secret.encode()
         with self.connect() as conn:
@@ -126,7 +129,8 @@ class Store:
             if row and row["suppressed_at"]:
                 return None
             if row and row["status"] == "pending" and row["confirmation_expires_at"] > stamp(now):
-                return None
+                return {"id": row["id"], "confirmation_token": self.token(row, "confirm"),
+                        "manage_token": self.token(row)}
             subscriber_id = row["id"] if row else uuid4().hex
             nonce = secrets.token_hex(16)
             conn.execute(
@@ -137,6 +141,8 @@ class Store:
                 (subscriber_id, email, json.dumps(selected), nonce, stamp(now + timedelta(days=2)), stamp(now)),
             )
             account = dict(conn.execute("SELECT * FROM subscribers WHERE id=?", (subscriber_id,)).fetchone())
+            conn.execute("""UPDATE delivery_log SET status='skipped',error_message='account links rotated'
+                            WHERE subscriber_id=? AND status IN ('pending','failed')""", (subscriber_id,))
             return {"id": subscriber_id, "confirmation_token": self.token(account, "confirm"),
                     "manage_token": self.token(account)}
 

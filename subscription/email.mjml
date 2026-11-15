@@ -1,0 +1,36 @@
+<mjml lang="zh">
+  <mj-head>
+    <mj-title>Daily Brief Radar</mj-title>
+    <mj-preview>三分钟，把今天值得知道的事补全。</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif" />
+      <mj-text color="#233d35" font-size="15px" line-height="1.8" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f4f3ec" width="620px">
+    <mj-section padding="28px 20px 12px">
+      <mj-column>
+        <mj-text font-size="12px" letter-spacing="2px">DAILY BRIEF RADAR · $issue_date</mj-text>
+        <mj-text font-size="30px" font-weight="700" padding-top="4px">把今天的世界补全。</mj-text>
+        <mj-text color="#66736a">每日三条必知 · 三分钟文字简报</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="20px">
+      <mj-column>
+        <mj-text>$banner</mj-text>
+        <mj-text>$content</mj-text>
+        <mj-divider border-color="#dce3d8" />
+        <mj-text font-size="13px">$observation</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="15px 20px 30px">
+      <mj-column>
+        <mj-text font-size="12px" color="#66736a">
+          你主动确认订阅后收到此邮件。偏好用于调整排序。<br />
+          <a href="$manage_url" style="color:#285440">管理偏好或续费</a> ·
+          <a href="$unsubscribe_url" style="color:#285440">退订每日邮件</a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

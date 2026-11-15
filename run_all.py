@@ -5,6 +5,7 @@
 
 用法：python run_all.py
 """
+import os
 import subprocess
 import sys
 import time
@@ -25,6 +26,18 @@ steps = FETCH_STEPS + [
     ("生成AI摘要", "core/summarize.py"),
     ("发送简报邮件", "core/send_email.py"),
 ]
+
+if os.environ.get("BRIEF_MODE") == "subscription":
+    from subscription.store import ROME, Store, utcnow
+
+    with Store().connect() as connection:
+        frozen = connection.execute("SELECT id FROM daily_issue WHERE issue_date=?",
+                                    (utcnow().astimezone(ROME).date().isoformat(),)).fetchone()
+    steps = [] if frozen else [
+        ("抓取订阅版新闻", "fetchers/fetch_category_news.py"),
+        ("生成通用三板块摘要", "-m", "subscription.cli", "generate"),
+    ]
+    steps.append(("冻结快照并创建发送任务", "-m", "subscription.cli", "publish"))
 
 def run_step_with_retry(step_name, script, extra_args):
     """执行一步，失败就等一会儿重试，重试次数用完才算真正失败"""
@@ -52,7 +65,7 @@ for step in steps:
         break
 
 if all_ok:
-    print("\n✅ 全部完成！简报已生成并发送")
+    print("\n✅ 简报任务已完成" if os.environ.get("BRIEF_MODE") == "subscription" else "\n✅ 全部完成！简报已生成并发送")
 else:
       sys.exit(1)
-  
+
