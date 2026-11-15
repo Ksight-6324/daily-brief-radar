@@ -20,8 +20,10 @@ QQ_EMAIL = os.environ.get("QQ_EMAIL", "")
 QQ_AUTH_CODE = os.environ.get("QQ_AUTH_CODE", "")
 SEND_TO = os.environ.get("SEND_TO", QQ_EMAIL)
 
-SMTP_SERVER = "smtp.qq.com"
-SMTP_PORT = 465
+# SMTP 服务器/端口可通过环境变量覆盖，默认仍是 QQ 邮箱。
+# Gmail：smtp.gmail.com / 465；Outlook：smtp-mail.outlook.com / 587（587 走 STARTTLS）
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "").strip() or "smtp.qq.com"
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "").strip() or "465")
 
 COLOR_DARK = "#2c3e50"
 COLOR_ACCENT = "#3f6b8f"
@@ -292,12 +294,18 @@ def build_html(date, slot, sections):
     opening_html = f'''<div style="font-size:15px; color:{COLOR_DARK}; background:{COLOR_BG_ACCENT}; border-radius:8px; padding:14px 18px; margin-bottom:16px; line-height:1.6;">早安👋 {opening}</div>''' if opening else ""
     closing_in_footer = f'''<div style="font-size:15px; font-weight:600; color:{COLOR_DARK}; margin-top:12px; border-top:1px solid rgba(63,107,143,0.25); padding-top:12px; line-height:1.6;">💌 {closing}</div>''' if closing else ""
 
+    has_jwc = bool(jwc_html.strip())
+    jwc_block = f'''<h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:8px;">学校教务</h2>
+        {jwc_html}''' if has_jwc else ""
+
     tab_bar = f'''
     <div style="display:table; width:100%; margin-bottom:18px; border-bottom:2px solid #eee;">
         <div style="display:table-cell; width:50%; text-align:center; padding:12px 0; background:{COLOR_DARK}; color:#fff; font-size:16px; font-weight:600; border-radius:6px 0 0 0;">🏫 学校教务</div>
         <div style="display:table-cell; width:50%; text-align:center; padding:12px 0; background:{COLOR_ACCENT}; color:#fff; font-size:16px; font-weight:600; border-radius:0 6px 0 0;">💻 科技资讯</div>
     </div>
     '''
+    if not has_jwc:
+        tab_bar = ""
 
     footer = f'''<div style="background:{COLOR_BG_ACCENT}; border-radius:8px; padding:18px 22px; margin-top:30px; text-align:center;">
         <div style="font-size:14px; color:{COLOR_MUTED};">今日最该做的一件事</div>
@@ -316,8 +324,7 @@ def build_html(date, slot, sections):
 
         {tab_bar}
 
-        <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:8px;">学校教务</h2>
-        {jwc_html}
+        {jwc_block}
 
         <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:26px;">🏆 各榜单头名</h2>
         {top_picks_html}
@@ -352,7 +359,12 @@ def send_brief_email():
     msg["Subject"] = Header(f"每日简报·{slot_tag} {date}", "utf-8")
 
     try:
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+        if SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=60)
+        else:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=60)
+            server.starttls()
+        with server:
             server.login(QQ_EMAIL, QQ_AUTH_CODE)
             server.sendmail(QQ_EMAIL, [SEND_TO], msg.as_string())
 
