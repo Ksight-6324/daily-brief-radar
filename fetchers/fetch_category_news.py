@@ -112,6 +112,11 @@ CATEGORY_SOURCES = {
     },
     "招聘": {
         "大公司招聘动态": {
+            # 下面两个 Google News 搜索源在 GitHub 服务器上曾被拒绝（503），已改用浏览器请求头再试；
+            # 仍失败时只会跳过，由后面三个稳定来源兜底
+            "TechCrunch裁员专题": "https://techcrunch.com/tag/layoffs/feed/",
+            "钛媒体": "https://www.tmtpost.com/rss.xml",
+            "IT之家": "https://www.ithome.com/rss/",
             "校招社招新闻": _gnews("校招 OR 社招 OR 招聘 腾讯 OR 字节跳动 OR 阿里巴巴 OR 华为 OR 美团 OR 小米"),
             "海外大厂招聘": _gnews("hiring OR layoffs OR \"graduate program\" Google OR Apple OR Microsoft OR Nvidia OR Ubisoft OR Epic",
                                     lang="en-US", gl="US", ceid="US:en"),
@@ -172,10 +177,16 @@ CATEGORY_SOURCES = {
 # 时效过滤：只保留最近多少小时内发布的新闻（简报的定位是"这半天内值得关注的事"）。
 # 艺术/设计/音乐/电影更新慢一些，放宽到 72 小时；没有发布时间的条目保留。
 DEFAULT_MAX_AGE_HOURS = 48
-MAX_AGE_HOURS = {"艺术": 72, "设计": 72, "音乐": 72, "电影": 72, "游戏": 72}
+MAX_AGE_HOURS = {"艺术": 72, "设计": 72, "音乐": 72, "电影": 72, "游戏": 72, "招聘": 168}
 
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; daily-brief-radar/1.0)"}
+# Google News 对"像机器人"的请求头更严格，用普通浏览器的请求头
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
@@ -188,7 +199,8 @@ def _clean(text, limit=220):
 
 def _parse(url):
     """用 requests 拉取（带超时，避免某个源卡死整条流水线），再交给 feedparser 解析"""
-    resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=HEADERS)
+    headers = BROWSER_HEADERS if "news.google.com" in url else HEADERS
+    resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers=headers)
     resp.raise_for_status()
     return feedparser.parse(resp.content)
 
