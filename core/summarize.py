@@ -228,24 +228,70 @@ def generate_greeting(todo_hint, action_hint, slot="noon"):
     return call_deepseek(prompt, temperature=0.95)
 
 
-def call_deepseek(prompt, max_retries=4, temperature=0.3):
+def llm_config():
+    """决定用哪家模型。配置了 LLM_API_KEY 就走 OpenAI 兼容接口（OpenAI、Gemini 的兼容端点等都行），
+    没配置就沿用原来的 DeepSeek，所以不改 Secret 时行为和以前完全一样。
+
+    环境变量（都是 GitHub Secret）：
+      LLM_API_KEY           必填才会启用；OpenAI 的 API Key（注意：ChatGPT Plus 订阅不含 API 额度，要单独充值）
+      LLM_MODEL             模型名，默认 gpt-6-luna（OpenAI 目前最便宜的一档）
+      LLM_BASE_URL          接口地址，默认 https://api.openai.com/v1
+      LLM_REASONING_EFFORT  推理强度，默认 low（只对 api.openai.com 生效；填 none 可关闭推理、更快更省，
+                            但并非所有模型都支持 none；留空用默认值）
+    """
+    key = os.environ.get("LLM_API_KEY", "").strip()
+    if not key:
+        return {"name": "DeepSeek", "url": DEEPSEEK_URL, "key": DEEPSEEK_API_KEY,
+                "model": "deepseek-chat", "effort": ""}
+    base = (os.environ.get("LLM_BASE_URL", "").strip() or "https://api.openai.com/v1").rstrip("/")
+    model = os.environ.get("LLM_MODEL", "").strip() or "gpt-6-luna"
+    effort = ""
+    if "api.openai.com" in base:
+        effort = os.environ.get("LLM_REASONING_EFFORT", "").strip() or "low"
+    return {"name": f"{model}", "url": base + "/chat/completions", "key": key, "model": model, "effort": effort}
+
+
+def call_llm(prompt, max_retries=4, temperature=0.3):
+    cfg = llm_config()
     headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Authorization": f"Bearer {cfg['key']}",
         "Content-Type": "application/json",
     }
     body = {
-        "model": "deepseek-chat",
+        "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
     }
+    if cfg["effort"]:
+        body["reasoning_effort"] = cfg["effort"]
+
     last_error = None
     for attempt in range(1, max_retries + 1):
         try:
-            resp = requests.post(DEEPSEEK_URL, headers=headers, json=body, timeout=120)
+            resp = requests.post(cfg["url"], headers=headers, json=body, timeout=180)
+            if resp.status_code == 400:
+                # 有些新模型不接受自定义 temperature / reasoning_effort：去掉这个参数立刻重试（不算一次失败）
+                msg = resp.text.lower()
+                dropped = False
+                if "temperature" in msg and "temperature" in body:
+                    body.pop("temperature"); dropped = True
+                if "reasoning" in msg and "reasoning_effort" in body:
+                    body.pop("reasoning_effort"); dropped = True
+                if dropped:
+                    print("  ℹ️ 该模型不支持部分参数，已去掉后重试")
+                    resp = requests.post(cfg["url"], headers=headers, json=body, timeout=180)
             resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"].strip()
+            content = resp.json()["choices"][0]["message"]["content"]
+            return (content or "").strip()
         except Exception as e:
             last_error = e
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status in (401, 403):
+                print(f"  ❌ {cfg['name']} 认证失败（{status}），请检查 Secret 里的 API Key 是否正确")
+                raise
+            if status == 429 and "quota" in str(getattr(e.response, "text", "")).lower():
+                print(f"  ❌ {cfg['name']} 额度不足，请到 API 账户充值（ChatGPT Plus 订阅不含 API 额度）")
+                raise
             if attempt < max_retries:
                 wait_seconds = attempt * 5
                 print(f"  ⚠️ 第{attempt}次请求失败（{e}），{wait_seconds}秒后重试...")
@@ -253,6 +299,27 @@ def call_deepseek(prompt, max_retries=4, temperature=0.3):
             else:
                 print(f"  ⚠️ 第{attempt}次请求失败（{e}），放弃")
     raise last_error
+
+
+call_deepseek = call_llm  # 旧名字保留，避免遗漏的调用点出错
+
+
+def safe_text(label, fn, *args, **kwargs):
+    """通用保护：fn 出错就返回空串，让对应部分在邮件里留空而不是整次运行失败"""
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        print(f"  ⚠️ 【{label}】生成失败，已跳过：{e}")
+        return ""
+
+
+def safe_pick(label, *args, **kwargs):
+    """调用 summarize_one_pick，出错（接口报错、内容审核拒绝等）只跳过这一个板块，不让整次运行失败"""
+    try:
+        return summarize_one_pick(label, *args, **kwargs)
+    except Exception as e:
+        print(f"  ⚠️ 【{label}】生成失败，已跳过：{e}")
+        return ""
 
 
 def load_json(filename):
@@ -767,6 +834,12 @@ def summarize_overview(jwc_text, tech_text):
 
 
 if __name__ == "__main__":
+    _cfg = llm_config()
+    print(f"本次使用的模型：{_cfg['name']}（{_cfg['url']}）")
+    if not _cfg["key"]:
+        print("❌ 没有配置任何 API Key（LLM_API_KEY 或 DEEPSEEK_API_KEY），无法生成简报")
+        sys.exit(1)
+
     now = rome_now()
     slot = detect_slot(now)
     print(f"正在生成罗马时间 {now:%Y-%m-%d %H:%M} 的{SLOT_LABELS[slot]}简报...\n")
@@ -808,11 +881,19 @@ if __name__ == "__main__":
     used_titles = set()
     if github_data or hn_data or rss_data:
         print("正在提取各榜单头名（AI自选信息完整的候选）...")
-        sections["top_picks"], used_titles = get_top_picks(github_data, hn_data, rss_data, seen_titles)
+        try:
+            sections["top_picks"], used_titles = get_top_picks(github_data, hn_data, rss_data, seen_titles)
+        except Exception as e:
+            print(f"  ⚠️ 各榜单头名生成失败，跳过：{e}")
+            sections["top_picks"] = ""
         print(sections["top_picks"] + "\n")
 
         print(f"正在总结科技资讯全览（目标{TECH_TOP_N}条，排除头名重复内容）...")
-        sections["tech"] = summarize_tech(github_data, hn_data, rss_data, used_titles, sections["top_picks"], seen_titles)
+        try:
+            sections["tech"] = summarize_tech(github_data, hn_data, rss_data, used_titles, sections["top_picks"], seen_titles)
+        except Exception as e:
+            print(f"  ⚠️ 科技资讯全览生成失败，跳过：{e}")
+            sections["tech"] = ""
         print(sections["tech"] + "\n")
 
     category_data = load_json("category_news.json")
@@ -832,7 +913,7 @@ if __name__ == "__main__":
             items = items_by_key.get(("经济", sub_label), [])
             if items:
                 print(f"正在筛选【{sub_label}】...")
-                result = summarize_one_pick(sub_label, items, ECONOMY_SUB_N, seen_titles=seen_titles)
+                result = safe_pick(sub_label, items, ECONOMY_SUB_N, seen_titles=seen_titles)
                 if result:
                     economy_parts.append(result)
         sections["economy"] = "\n".join(economy_parts)
@@ -842,7 +923,7 @@ if __name__ == "__main__":
             items = items_by_key.get(("政治", sub_label), [])
             if items:
                 print(f"正在筛选【{sub_label}】...")
-                result = summarize_one_pick(sub_label, items, POLITICS_SUB_N, seen_titles=seen_titles)
+                result = safe_pick(sub_label, items, POLITICS_SUB_N, seen_titles=seen_titles)
                 if result:
                     politics_parts.append(result)
         sections["politics"] = "\n".join(politics_parts)
@@ -851,7 +932,7 @@ if __name__ == "__main__":
         if science_items:
             print(f"正在筛选【科学突破】（目标{SCIENCE_TOP_N}条）...")
             science_rule = "3. 只挑真正的科学发现/技术突破类内容，如果这条新闻本质是政治决策/经济决策/商业博弈（哪怕看起来跟科技沾边，比如政府叫停某个项目、公司之间的商业纠纷），坚决不要选，即使找不到符合条件的新闻也不要凑数"
-            sections["science"] = summarize_one_pick("科学突破", science_items, SCIENCE_TOP_N, science_rule, seen_titles=seen_titles)
+            sections["science"] = safe_pick("科学突破", science_items, SCIENCE_TOP_N, science_rule, seen_titles=seen_titles)
             print(sections["science"] + "\n")
 
     # ---------- 新增板块：每个子类单独让AI挑，某一个失败不影响其他板块 ----------
@@ -918,13 +999,13 @@ if __name__ == "__main__":
 
     if has_content:
         print("正在生成今日总览...")
-        sections["overview"] = summarize_overview(
+        sections["overview"] = safe_text("今日总览", summarize_overview,
             sections.get("jwc", "无"), tech_for_overview
         )
         print(sections["overview"] + "\n")
 
         print("正在生成今日行动建议（学生视角，禁止职场黑话）...")
-        sections["action"] = generate_action_advice(
+        sections["action"] = safe_text("今日行动建议", generate_action_advice,
             sections.get("jwc", "无"),
             sections.get("tech", "无"),
             sections.get("top_picks", "无"),
@@ -936,7 +1017,7 @@ if __name__ == "__main__":
         print(sections["action"] + "\n")
 
     print(f"正在生成{SLOT_LABELS[slot]}问候语...")
-    sections["greeting"] = generate_greeting(
+    sections["greeting"] = safe_text("问候语", generate_greeting,
         sections.get("overview", "（今天没有总览内容）"),
         sections.get("action", "（今天没有行动建议）"),
         slot,

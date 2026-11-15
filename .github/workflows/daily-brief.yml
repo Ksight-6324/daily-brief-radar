@@ -47,6 +47,10 @@ jobs:
           USER_NAME: ${{ secrets.USER_NAME }}
           USER_PROFILE_TEXT: ${{ secrets.USER_PROFILE_TEXT }}
           WATCHLIST: ${{ secrets.WATCHLIST }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_REASONING_EFFORT: ${{ secrets.LLM_REASONING_EFFORT }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           # 手动触发（workflow_dispatch）不受时间判断影响，随时可以测试。
