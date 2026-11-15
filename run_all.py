@@ -9,6 +9,11 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path.cwd() / ".env")
 
 # 每一步最多重试几次、每次重试前等多久（秒）
 MAX_RETRIES = 3

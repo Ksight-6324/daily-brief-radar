@@ -10,6 +10,25 @@ from tests.support import NOW, StoreCase
 
 
 class PipelineTest(StoreCase):
+    def test_cli_loads_local_dotenv_without_overriding_process_configuration(self):
+        root = Path(__file__).resolve().parents[1]
+        dotenv_database = self.store.path.parent / "dotenv.db"
+        (self.store.path.parent / ".env").write_text(
+            "BRIEF_DB_PATH=" + dotenv_database.as_posix() + "\n", encoding="utf-8"
+        )
+        env = {**os.environ, "PYTHONPATH": str(root)}
+        env.pop("BRIEF_DB_PATH", None)
+        result = subprocess.run([sys.executable, "-m", "subscription.cli", "init"],
+                                cwd=self.store.path.parent, env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(dotenv_database.exists())
+        overridden_database = self.store.path.parent / "overridden.db"
+        env["BRIEF_DB_PATH"] = str(overridden_database)
+        result = subprocess.run([sys.executable, "-m", "subscription.cli", "init"],
+                                cwd=self.store.path.parent, env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(overridden_database.exists())
+
     def test_generated_markdown_becomes_a_frozen_mvp_snapshot(self):
         text = """DATE|||2026-11-15
 SLOT|||noon

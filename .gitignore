@@ -17,3 +17,6 @@ var/
 .env.*
 !.env.example
 node_modules/
+.venv/
+.playwright-cli/
+output/playwright/

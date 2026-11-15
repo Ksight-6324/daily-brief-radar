@@ -2,8 +2,11 @@
 
 import argparse
 import json
+import subprocess
 import time
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from .delivery import Delivery
 from .pipeline import freeze_markdown, generate_markdown
@@ -11,6 +14,7 @@ from .store import ROME, Store, utcnow
 
 
 def main():
+    load_dotenv(Path.cwd() / ".env")
     parser = argparse.ArgumentParser(description="Daily Brief Radar subscription operations")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
@@ -18,6 +22,8 @@ def main():
     commands.add_parser("scan")
     commands.add_parser("publish")
     commands.add_parser("generate")
+    scheduler = commands.add_parser("schedule")
+    scheduler.add_argument("--watch", action="store_true")
     freeze = commands.add_parser("freeze")
     freeze.add_argument("--input", default="daily_brief.md")
     register = commands.add_parser("register")
@@ -68,6 +74,19 @@ def main():
             if not args.watch:
                 break
             time.sleep(5)
+    elif args.command == "schedule":
+        from .scheduler import schedule_once
+        while True:
+            try:
+                print(json.dumps({"queued": schedule_once(store, delivery)}), flush=True)
+            except (ValueError, subprocess.SubprocessError) as error:
+                if not args.watch:
+                    raise
+                print("Scheduler failed: " + type(error).__name__, flush=True)
+                time.sleep(240)
+            if not args.watch:
+                break
+            time.sleep(60)
     elif args.command == "status":
         with store.connect() as conn:
             statuses = {row["status"]: row["count"] for row in conn.execute("SELECT status,count(*) AS count FROM delivery_log GROUP BY status")}

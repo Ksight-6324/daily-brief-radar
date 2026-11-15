@@ -1,5 +1,9 @@
 import base64
+import json
 import unittest
+from unittest.mock import patch
+
+import requests
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -53,12 +57,53 @@ class PaymentTest(StoreCase):
         account = self.subscriber()
         order = self.store.create_order(account["id"], "monthly", NOW)
         params = self.provider.precreate_parameters(order, NOW)
-        import json
         business = json.loads(params["biz_content"])
         self.assertEqual(business["out_trade_no"], order["order_token"])
         self.assertEqual(business["total_amount"], "9.90")
         signed = "&".join(f"{key}={params[key]}" for key in sorted(params) if key != "sign" and params[key])
         self.private.public_key().verify(base64.b64decode(params["sign"]), signed.encode(), padding.PKCS1v15(), hashes.SHA256())
+
+    def gateway_response(self, token, valid=True):
+        content = {"code": "10000", "out_trade_no": token, "qr_code": "https://qr.alipay.com/test-order"}
+        raw = json.dumps(content, ensure_ascii=False, separators=(",", ":"))
+        signature = base64.b64encode(self.private.sign(raw.encode(), padding.PKCS1v15(), hashes.SHA256())).decode()
+        response = requests.Response()
+        response.status_code = 200
+        response._content = ('{"alipay_trade_precreate_response":' + raw + ',"sign":' + json.dumps(signature if valid else "fake") + '}').encode()
+        response.encoding = "utf-8"
+        return response
+
+    def test_signed_precreate_response_is_verified_before_saving_qr(self):
+        account = self.subscriber()
+        order = self.store.create_order(account["id"], "monthly", NOW)
+        with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"])):
+            self.provider.precreate(order, NOW)
+        self.assertEqual(self.store.order(order["order_token"])["qr_code"], "https://qr.alipay.com/test-order")
+        with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"], valid=False)):
+            with self.assertRaises(ValueError):
+                self.provider.precreate(order, NOW)
+
+    def test_real_payment_api_route_verifies_callback_and_enforces_order_ownership(self):
+        from fastapi.testclient import TestClient
+        from web.app import create_app
+        from subscription.delivery import Delivery
+        from subscription.store import utcnow
+        account = self.subscriber()
+        other = self.subscriber("other@example.com")
+        headers = {"Authorization": "Bearer " + account["manage_token"]}
+        delivery = Delivery(self.store, "https://brief.example.com", "Brief <brief@example.com>")
+        with TestClient(create_app(self.store, delivery, self.provider)) as client:
+            order = self.store.create_order(account["id"], "monthly", utcnow())
+            with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"])):
+                response = client.post("/api/orders", headers=headers, json={"plan": "monthly"})
+            self.assertEqual(response.status_code, 200, response.text)
+            token = response.json()["order_token"]
+            self.assertEqual(client.get(f"/api/orders/{token}/qr", headers=headers).headers["content-type"], "image/svg+xml")
+            foreign = {"Authorization": "Bearer " + other["manage_token"]}
+            self.assertEqual(client.get(f"/api/orders/{token}", headers=foreign).status_code, 404)
+            response = client.post("/api/payments/alipay/notify", data=self.notification(token))
+            self.assertEqual(response.text, "success")
+            self.assertEqual(client.get(f"/api/orders/{token}", headers=headers).json()["status"], "paid")
 
 
 if __name__ == "__main__":
