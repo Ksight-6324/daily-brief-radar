@@ -1,8 +1,10 @@
 import json
 import threading
+from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest.mock import patch
 
 from subscription.delivery import Delivery, ResendClient
 from subscription.render import render_issue
@@ -78,6 +80,49 @@ class DeliveryTest(StoreCase):
             results = list(executor.map(lambda _: self.delivery.run_once(NOW), range(2)))
         self.assertEqual(results.count("success"), 1)
         self.assertEqual(len(ProviderHandler.calls), 1)
+
+    def test_replaced_worker_cannot_send_or_consume_trial_after_losing_lease(self):
+        account = self.subscriber()
+        self.delivery.enqueue_issue(self.issue_id, NOW)
+        claimed = threading.Event()
+        resume = threading.Event()
+        original = self.store.transaction
+        counts = {}
+
+        @contextmanager
+        def pause_after_claim():
+            name = threading.current_thread().name
+            counts[name] = counts.get(name, 0) + 1
+            with original() as conn:
+                yield conn
+            if name == "stale-worker" and counts[name] == 1:
+                claimed.set()
+                resume.wait(5)
+
+        results = []
+        with patch.object(self.store, "transaction", pause_after_claim):
+            thread = threading.Thread(name="stale-worker", target=lambda: results.append(self.delivery.run_once(NOW)))
+            thread.start()
+            self.assertTrue(claimed.wait(3))
+            try:
+                self.assertEqual(self.delivery.run_once(NOW + timedelta(minutes=11)), "success")
+            finally:
+                resume.set()
+                thread.join(5)
+        self.assertEqual(len(ProviderHandler.calls), 1)
+        self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 2)
+
+    def test_racing_resubscription_confirmation_contains_current_valid_challenge(self):
+        account = self.subscriber()
+        self.store.unsubscribe(account["manage_token"], NOW)
+        first = self.store.register("reader@example.com", [], NOW + timedelta(minutes=1))
+        second = self.store.register("reader@example.com", [], NOW + timedelta(minutes=2))
+        self.delivery.enqueue_confirmation(first, NOW + timedelta(minutes=3))
+        self.delivery.enqueue_confirmation(second, NOW + timedelta(minutes=3))
+        current = self.store.subscriber(account["id"])
+        queued = [row for row in self.rows() if row["status"] == "pending"]
+        self.assertEqual(len(queued), 1)
+        self.assertIn(self.store.token(current, "confirm"), json.loads(queued[0]["payload"])["html"])
 
     def test_unsubscribe_between_queue_and_send_skips_message(self):
         account = self.subscriber()

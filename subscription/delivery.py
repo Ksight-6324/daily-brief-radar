@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import requests
 
-from .render import render_issue, render_notice
+from .render import links, render_issue, render_notice
 from .store import GRACE_DAYS, ROME, stamp, utcnow
 
 
@@ -74,10 +74,14 @@ class Delivery:
         now = now or utcnow()
         with self.store.transaction() as conn:
             row = conn.execute("SELECT * FROM subscribers WHERE id=?", (account["id"],)).fetchone()
-            confirmation_url = f"{self.base_url}/confirm#{account['confirmation_token']}"
+            confirmation_url = f"{self.base_url}/confirm#{self.store.token(row, 'confirm')}"
+            manage_url, unsubscribe_url = links(self.base_url, self.store.token(row))
             from html import escape
-            html = f'<h1>确认订阅 Daily Brief Radar</h1><p>每天一封，三分钟读完。确认后开始三期免费试读。</p><p><a href="{escape(confirmation_url)}">确认我的邮箱</a></p><p>链接两天内有效。</p>'
-            text = f"确认订阅 Daily Brief Radar，开始三期免费试读。\n{confirmation_url}"
+            html = (f'<h1>确认订阅 Daily Brief Radar</h1><p>每天一封，三分钟读完。确认后开始三期免费试读。</p>'
+                    f'<p><a href="{escape(confirmation_url)}">确认我的邮箱</a></p><p>链接两天内有效。</p>'
+                    f'<p><a href="{escape(manage_url)}">管理偏好</a> · <a href="{escape(unsubscribe_url)}">退订</a></p>')
+            text = (f"确认订阅 Daily Brief Radar，开始三期免费试读。\n{confirmation_url}"
+                    f"\n管理偏好 {manage_url}\n退订 {unsubscribe_url}")
             payload = self.payload(row, "请确认你的简报订阅", html, text)
             return self.enqueue(conn, row, "confirmation", row["token_nonce"], payload, now)
 
@@ -157,6 +161,9 @@ class Delivery:
         # Keep the writer lock through the HTTP request so unsubscribe and another worker
         # cannot interleave with the final eligibility check and provider submission.
         with self.store.transaction() as conn:
+            current = conn.execute("SELECT status,attempts FROM delivery_log WHERE id=?", (task["id"],)).fetchone()
+            if current["status"] != "sending" or current["attempts"] != task["attempts"] + 1:
+                return "skipped"
             row = conn.execute(ACCOUNT_QUERY + " WHERE s.id=?", (task["subscriber_id"],)).fetchone()
             allowed = row and row["status"] != "unsubscribed" and not row["suppressed_at"]
             if task["task_type"] == "daily_brief":

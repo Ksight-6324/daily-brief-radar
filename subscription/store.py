@@ -128,7 +128,7 @@ class Store:
                 return None
             if row and row["suppressed_at"]:
                 return None
-            if row and row["status"] == "pending" and row["confirmation_expires_at"] > stamp(now):
+            if row and row["confirmation_expires_at"] > stamp(now):
                 return {"id": row["id"], "confirmation_token": self.token(row, "confirm"),
                         "manage_token": self.token(row)}
             subscriber_id = row["id"] if row else uuid4().hex
