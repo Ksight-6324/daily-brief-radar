@@ -135,7 +135,7 @@ def _fetch_on_this_day(month, day):
     return events
 
 
-def build_history(call_ai, now, slot, seen_urls=None, count=2):
+def build_history(call_ai, now, slot, seen_urls=None, count=3):
     seen_urls = seen_urls or set()
     events = [e for e in _fetch_on_this_day(now.month, now.day) if e["url"] not in seen_urls]
     # 偏好有历史分量的老条目：按年份从早到晚取，避免全是近几年的新闻性事件
@@ -147,6 +147,7 @@ def build_history(call_ai, now, slot, seen_urls=None, count=2):
     prompt = f"""下面是"历史上的 {now.month} 月 {now.day} 日"发生过的事件（来自维基百科）。
 请挑出 {count} 条最值得了解的：优先影响深远、能帮助理解世界今天为什么是这样的事件；
 不要选纯娱乐、体育、灾难数字罗列这类内容。
+这个板块叫"中外历史"：如果候选里有和中国历史相关的事件，至少选 1 条，其余兼顾外国历史，不要全是同一个地区。
 
 {lines}
 

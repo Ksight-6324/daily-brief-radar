@@ -1,12 +1,12 @@
 """
-抓取各类别新闻（经济 / 政治 / 科学 + 欧洲意大利 / 设计 / 游戏 / 股市 / 国内政策 / 招聘 / 时尚 / AI公司）
+抓取 13 个板块的新闻候选（股票经济 / 石油黄金 / 政治军事 / 历史 / 音乐演出 / 设计美术 / 专辑影视 /
+人工智能 / 自我提升 / 物理化学 / 生物科技 / 心灵疗养 / 就业机会）
 
-结构：大类 -> { 子类名: RSS地址 或 {来源名: RSS地址} }
-- 值是字符串：该子类只有一个源（旧写法，保持兼容）
-- 值是字典：该子类有多个源，每条新闻会带上 "source"（来源名），邮件里显示成来源徽标
-
-某个源失效时只会打印警告并跳过，不会影响其他源。
-想增删源，直接改下面的 CATEGORY_SOURCES 即可。
+结构：大类（板块）-> { 子类名: { 来源名: RSS地址 } }
+- 每条新闻会带上 "source"（来源名），邮件里显示成来源徽标
+- 每个子类在 core/summarize.py 的 SECTION_SPECS 里有对应的"选几条 + 筛选规则"
+- 某个源失效时只会打印警告并跳过，不会影响其他源
+- 想增删源，直接改下面的 CATEGORY_SOURCES；板块顺序和每板块条数上限在 core/layout.py
 
 运行前需要先装：pip install feedparser requests
 """
@@ -15,77 +15,19 @@ import json
 import re
 import time
 from datetime import datetime
+from urllib.parse import quote
 
 import feedparser
 import requests
 
-# Google News 搜索型 RSS：没有官方 RSS 的主题（招聘动态、AI 公司新闻）用它兜底
+
+# Google News 搜索型 RSS：没有官方 RSS 的主题用它兜底（在 GitHub 服务器上可能被拒绝，被拒只会跳过）
 def _gnews(query, lang="zh-CN", gl="CN", ceid="CN:zh-Hans"):
-    from urllib.parse import quote
     return f"https://news.google.com/rss/search?q={quote(query)}&hl={lang}&gl={gl}&ceid={ceid}"
 
 
 CATEGORY_SOURCES = {
-    # ===== 原有类别（保持不变） =====
-    "经济": {
-        "中国经济": "https://www.chinanews.com.cn/rss/finance.xml",
-        "世界经济": {
-            "BBC商业": "http://feeds.bbci.co.uk/news/business/rss.xml",
-            "The Guardian商业": "https://www.theguardian.com/business/rss",
-            "纽约时报商业": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
-        },
-    },
-    "政治": {
-        "国内时政": "https://www.chinanews.com.cn/rss/china.xml",
-        "国际时政": {
-            "BBC": "http://feeds.bbci.co.uk/news/world/rss.xml",
-            "The Guardian": "https://www.theguardian.com/world/rss",
-            "纽约时报": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-            "半岛电视台": "https://www.aljazeera.com/xml/rss/all.xml",
-            "德国之声": "https://rss.dw.com/rdf/rss-en-all",
-        },
-    },
-    "科学突破": {
-        "科学突破": "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
-    },
-
-    # ===== 新增类别 =====
-    "欧洲与意大利": {
-        "欧盟": {
-            "Politico Europe": "https://www.politico.eu/feed/",
-            "BBC Europe": "http://feeds.bbci.co.uk/news/world/europe/rss.xml",
-        },
-        "意大利": {
-            "ANSA": "https://www.ansa.it/english/news/english_nr_rss.xml",
-            "la Repubblica": "https://www.repubblica.it/rss/homepage/rss2.0.xml",
-        },
-    },
-    "设计": {
-        "设计": {
-            "Dezeen": "https://www.dezeen.com/feed/",
-            "Designboom": "https://www.designboom.com/feed/",
-            "Wallpaper": "https://www.wallpaper.com/rss",
-            "ArchDaily": "https://www.archdaily.com/feed",
-            "Core77": "https://feeds.feedburner.com/core77/blog",
-        },
-    },
-    "游戏": {
-        "3A游戏资讯": {
-            "Steam": "https://store.steampowered.com/feeds/news/",
-            "IGN": "https://feeds.feedburner.com/ign/games-all",
-            "GameSpot": "https://www.gamespot.com/feeds/mashup/",
-            "PC Gamer": "https://www.pcgamer.com/rss/",
-            "Gematsu": "https://www.gematsu.com/feed",
-            "VGC": "https://www.videogameschronicle.com/feed/",
-            "Eurogamer": "https://www.eurogamer.net/feed",
-            "Polygon": "https://www.polygon.com/rss/index.xml",
-        },
-        "游戏公司": {
-            "GamesIndustry.biz": "https://www.gamesindustry.biz/feed",
-            "Game Developer": "https://www.gamedeveloper.com/rss.xml",
-        },
-    },
-    "股市": {
+    "股票经济": {
         "美股": {
             "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
             "CNBC Investing": "https://www.cnbc.com/id/15839069/device/rss/rss.html",
@@ -100,59 +42,76 @@ CATEGORY_SOURCES = {
             "SCMP Business": "https://www.scmp.com/rss/92/feed",
             "RTHK财经": "https://rthk.hk/rthk/news/rss/c_expressnews_cfinance.xml",
         },
+        "宏观经济": {
+            "中新网财经": "https://www.chinanews.com.cn/rss/finance.xml",
+            "BBC商业": "http://feeds.bbci.co.uk/news/business/rss.xml",
+            "The Guardian商业": "https://www.theguardian.com/business/rss",
+            "纽约时报商业": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        },
     },
-    "国内要闻与政策": {
-        "国内要闻": {
+    "石油黄金": {
+        "石油能源": {
+            "OilPrice": "https://oilprice.com/rss/main",
+            "CNBC能源": "https://www.cnbc.com/id/19836768/device/rss/rss.html",
+            "Rigzone": "https://www.rigzone.com/news/rss/rigzone_latest.aspx",
+        },
+        "黄金贵金属": {
+            "FXStreet": "https://www.fxstreet.com/rss/news",
+            "Mining.com": "https://www.mining.com/feed/",
+            "Investing.com大宗商品": "https://www.investing.com/rss/commodities.rss",
+        },
+    },
+    "政治军事": {
+        "国际政治": {
+            "BBC": "http://feeds.bbci.co.uk/news/world/rss.xml",
+            "The Guardian": "https://www.theguardian.com/world/rss",
+            "纽约时报": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+            "半岛电视台": "https://www.aljazeera.com/xml/rss/all.xml",
+            "德国之声": "https://rss.dw.com/rdf/rss-en-all",
+            "Politico Europe": "https://www.politico.eu/feed/",
+            "ANSA": "https://www.ansa.it/english/news/english_nr_rss.xml",
+            "中新网国际": "https://www.chinanews.com.cn/rss/world.xml",
+        },
+        "国内政策": {
+            "中新网时政": "https://www.chinanews.com.cn/rss/china.xml",
+            "新华网": "http://www.news.cn/politics/news_politics.xml",
             "中新网要闻": "https://www.chinanews.com.cn/rss/scroll-news.xml",
         },
-        "政策走向": {
-            "新华网": "http://www.news.cn/politics/news_politics.xml",
-            "中新网财经": "https://www.chinanews.com.cn/rss/finance.xml",
+        "军事": {
+            "Defense One": "https://www.defenseone.com/rss/all/",
+            "Breaking Defense": "https://breakingdefense.com/feed/",
+            "Defense News": "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml",
+            "The War Zone": "https://www.twz.com/feed",
+            "War on the Rocks": "https://warontherocks.com/feed/",
         },
     },
-    "招聘": {
-        "大公司招聘动态": {
-            # 下面两个 Google News 搜索源在 GitHub 服务器上曾被拒绝（503），已改用浏览器请求头再试；
-            # 仍失败时只会跳过，由后面三个稳定来源兜底
-            "TechCrunch裁员专题": "https://techcrunch.com/tag/layoffs/feed/",
-            "钛媒体": "https://www.tmtpost.com/rss.xml",
-            "IT之家": "https://www.ithome.com/rss/",
-            "校招社招新闻": _gnews("校招 OR 社招 OR 招聘 腾讯 OR 字节跳动 OR 阿里巴巴 OR 华为 OR 美团 OR 小米"),
-            "海外大厂招聘": _gnews("hiring OR layoffs OR \"graduate program\" Google OR Apple OR Microsoft OR Nvidia OR Ubisoft OR Epic",
-                                    lang="en-US", gl="US", ceid="US:en"),
+    "历史": {
+        "历史新闻": {
+            "Smithsonian": "https://www.smithsonianmag.com/rss/history/",
+            "History Extra": "https://www.historyextra.com/feed/",
+            "Archaeology": "https://www.archaeology.org/rss",
         },
     },
-    "时尚": {
-        "时尚品牌": {
-            "Business of Fashion": "https://www.businessoffashion.com/arc/outboundfeeds/rss/",
-            "Vogue": "https://www.vogue.com/feed/rss",
-            "WWD": "https://wwd.com/feed/",
-            "Hypebeast": "https://hypebeast.com/feed",
-            "Highsnobiety": "https://www.highsnobiety.com/feed/",
-            "华丽志": "https://luxe.co/feed",
-        },
-    },
-    "电影": {
-        "电影": {
-            "Variety": "https://variety.com/feed/",
-            "Deadline": "https://deadline.com/feed/",
-            "IndieWire": "https://www.indiewire.com/feed/",
-            "The Film Stage": "https://thefilmstage.com/feed/",
-            "Little White Lies": "https://lwlies.com/feed/",
-            "SlashFilm": "https://www.slashfilm.com/feed/",
-        },
-    },
-    "音乐": {
-        "音乐": {
+    "音乐演出": {
+        "音乐与演出": {
+            "Billboard": "https://www.billboard.com/feed/",
+            "Variety音乐": "https://variety.com/v/music/feed/",
+            "Rolling Stone": "https://www.rollingstone.com/music/feed/",
             "Pitchfork新闻": "https://pitchfork.com/feed/feed-news/rss",
-            "Pitchfork专辑评论": "https://pitchfork.com/feed/feed-album-reviews/rss",
             "Stereogum": "https://www.stereogum.com/feed/",
             "Consequence": "https://consequence.net/feed/",
             "NME": "https://www.nme.com/feed",
             "The Quietus": "https://thequietus.com/feed",
         },
     },
-    "艺术": {
+    "设计美术": {
+        "设计": {
+            "Dezeen": "https://www.dezeen.com/feed/",
+            "Designboom": "https://www.designboom.com/feed/",
+            "Wallpaper": "https://www.wallpaper.com/rss",
+            "ArchDaily": "https://www.archdaily.com/feed",
+            "Core77": "https://feeds.feedburner.com/core77/blog",
+        },
         "美术": {
             "Artnet": "https://news.artnet.com/feed",
             "Hyperallergic": "https://hyperallergic.com/feed/",
@@ -161,7 +120,24 @@ CATEGORY_SOURCES = {
             "Colossal": "https://www.thisiscolossal.com/feed/",
         },
     },
-    "AI公司": {
+    "专辑影视": {
+        "新专辑": {
+            "Pitchfork专辑评论": "https://pitchfork.com/feed/feed-album-reviews/rss",
+            "Stereogum": "https://www.stereogum.com/feed/",
+            "Consequence": "https://consequence.net/feed/",
+            "NME": "https://www.nme.com/feed",
+            "Rolling Stone": "https://www.rollingstone.com/music/feed/",
+        },
+        "影视": {
+            "Variety": "https://variety.com/feed/",
+            "Deadline": "https://deadline.com/feed/",
+            "IndieWire": "https://www.indiewire.com/feed/",
+            "The Film Stage": "https://thefilmstage.com/feed/",
+            "Little White Lies": "https://lwlies.com/feed/",
+            "SlashFilm": "https://www.slashfilm.com/feed/",
+        },
+    },
+    "人工智能": {
         "AI公司动态": {
             "OpenAI": "https://openai.com/news/rss.xml",
             "Google AI": "https://blog.google/technology/ai/rss/",
@@ -172,12 +148,68 @@ CATEGORY_SOURCES = {
                                   lang="en-US", gl="US", ceid="US:en"),
         },
     },
+    "自我提升": {
+        "自我提升文章": {
+            "Big Think": "https://bigthink.com/feed/",
+            "Farnam Street": "https://fs.blog/feed/",
+            "Zen Habits": "https://zenhabits.net/feed/",
+            "Scott Young": "https://www.scotthyoung.com/blog/feed/",
+            "Cal Newport": "https://calnewport.com/feed/",
+            "Lifehacker": "https://lifehacker.com/feed/rss",
+        },
+    },
+    "物理化学": {
+        "物理": {
+            "Phys.org物理": "https://phys.org/rss-feed/physics-news/",
+            "ScienceDaily物理": "https://www.sciencedaily.com/rss/matter_energy/physics.xml",
+            "Physics World": "https://physicsworld.com/feed/",
+            "Quanta": "https://api.quantamagazine.org/feed/",
+        },
+        "化学": {
+            "Phys.org化学": "https://phys.org/rss-feed/chemistry-news/",
+            "ScienceDaily化学": "https://www.sciencedaily.com/rss/matter_energy/chemistry.xml",
+        },
+    },
+    "生物科技": {
+        "生物科技": {
+            "STAT": "https://www.statnews.com/feed/",
+            "Endpoints": "https://endpts.com/feed/",
+            "BioPharma Dive": "https://www.biopharmadive.com/feeds/news/",
+            "GEN": "https://www.genengnews.com/feed/",
+            "Phys.org生物技术": "https://phys.org/rss-feed/biology-news/biotechnology/",
+            "Nature Biotechnology": "https://www.nature.com/nbt.rss",
+        },
+    },
+    "心灵疗养": {
+        "心灵疗养文章": {
+            "Greater Good": "https://greatergood.berkeley.edu/rss",
+            "Mindful": "https://www.mindful.org/feed/",
+            "Psyche": "https://psyche.co/feed",
+            "Tricycle": "https://tricycle.org/feed/",
+            "ScienceDaily心理": "https://www.sciencedaily.com/rss/mind_brain/psychology.xml",
+        },
+    },
+    "就业机会": {
+        "大公司招聘动态": {
+            # Google News 搜索源在 GitHub 服务器上曾被拒绝（503），已改用浏览器请求头再试；
+            # 仍失败时只会跳过，由前面几个稳定来源兜底
+            "TechCrunch裁员专题": "https://techcrunch.com/tag/layoffs/feed/",
+            "钛媒体": "https://www.tmtpost.com/rss.xml",
+            "IT之家": "https://www.ithome.com/rss/",
+            "校招社招新闻": _gnews("校招 OR 社招 OR 招聘 腾讯 OR 字节跳动 OR 阿里巴巴 OR 华为 OR 美团 OR 小米"),
+            "海外大厂招聘": _gnews("hiring OR layoffs OR \"graduate program\" Google OR Apple OR Microsoft OR Nvidia OR Ubisoft OR Epic",
+                                    lang="en-US", gl="US", ceid="US:en"),
+        },
+    },
 }
 
 # 时效过滤：只保留最近多少小时内发布的新闻（简报的定位是"这半天内值得关注的事"）。
-# 艺术/设计/音乐/电影更新慢一些，放宽到 72 小时；没有发布时间的条目保留。
+# 更新慢的板块放宽时间窗；已推送过的内容由 seen_items.json 排除，不会重复。没有发布时间的条目保留。
 DEFAULT_MAX_AGE_HOURS = 48
-MAX_AGE_HOURS = {"艺术": 72, "设计": 72, "音乐": 72, "电影": 72, "游戏": 72, "招聘": 168}
+MAX_AGE_HOURS = {
+    "石油黄金": 72, "政治军事": 72, "历史": 240, "音乐演出": 72, "设计美术": 72, "专辑影视": 72,
+    "自我提升": 504, "物理化学": 96, "生物科技": 72, "心灵疗养": 168, "就业机会": 168,
+}
 
 REQUEST_TIMEOUT = 20
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; daily-brief-radar/1.0)"}
@@ -250,15 +282,12 @@ if __name__ == "__main__":
     for category, subs in CATEGORY_SOURCES.items():
         for subcategory, src in subs.items():
             print(f"正在抓取【{category}-{subcategory}】...")
-            if isinstance(src, dict):
+            items = []
+            for source_name, url in src.items():
                 # 多个源：每个源少取几条，合起来给AI挑
-                items = []
-                for source_name, url in src.items():
-                    got = fetch_one(category, subcategory, url, source_name, max_items=5)
-                    print(f"  · {source_name}: {len(got)} 条")
-                    items.extend(got)
-            else:
-                items = fetch_one(category, subcategory, src)
+                got = fetch_one(category, subcategory, url, source_name, max_items=5)
+                print(f"  · {source_name}: {len(got)} 条")
+                items.extend(got)
             print(f"  → 共 {len(items)} 条")
             all_items.extend(items)
 

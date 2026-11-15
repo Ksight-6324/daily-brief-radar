@@ -35,6 +35,7 @@ import requests
 from datetime import datetime
 
 # 同目录下的模块（python core/summarize.py 运行时，core/ 会自动在导入路径里）
+import layout
 import learning
 import youtube_digest
 
@@ -45,7 +46,7 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 
 SCIENCE_TOP_N = 2
-TECH_TOP_N = 6
+TECH_TOP_N = 2  # 「人工智能」板块里来自 GitHub/HN/科技媒体的条数（另外 3 条来自 AI 公司动态）
 ECONOMY_SUB_N = 2
 POLITICS_SUB_N = 2
 
@@ -549,7 +550,8 @@ def summarize_tech(github_data, hn_data, rss_data, exclude_titles, top_picks_tex
 1. 先判断哪些内容其实在讲同一件事，合并成一条
 2. 排除掉跟上面"各榜单头名"重复的事件
 3. 把英文全部翻译成中文
-4. 严格挑出其中最值得关注的{TECH_TOP_N}条
+4. 只挑和人工智能（模型、AI产品、AI工具与开源项目、AI行业动态）直接相关的内容，其他科技内容一律不要选；
+   严格挑出其中最值得关注的{TECH_TOP_N}条，宁缺毋滥
 
 行首方括号（如[TechCrunch AI]）表示这条来自哪个来源，供你判断用，不要写进标题或摘要。
 
@@ -652,96 +654,123 @@ def titles_from(text):
     return titles
 
 
-# ============ 新增板块：欧洲/意大利、设计、游戏、股市、国内政策、招聘、时尚、AI公司 ============
-# 每个板块：(板块key, 抓取脚本里的大类名, [(子类名, 选几条, 额外筛选规则)])
+# ============ 13 个板块的内容规格 ============
+# 板块的顺序、每个板块每组最多几条，在 core/layout.py；
+# 这里写每个"内容组"从抓取脚本的哪个大类/子类里挑、挑几条、筛选规则。
 # 额外规则从"3."开始编号（1、2 是通用规则）。想调整某个板块的口味，直接改这里的文字。
 WATCHLIST = os.environ.get("WATCHLIST", "").strip()  # 可选：你关注的公司/股票代码，逗号分隔
 _WATCH_RULE = f"\n5. 用户重点关注的公司/股票（相关消息优先选）：{WATCHLIST}" if WATCHLIST else ""
 
-NO_ADVICE_RULE = "只陈述事实，绝对不要给买入、卖出、持有建议，不要写目标价，也不要预测股价涨跌。"
+NO_ADVICE_RULE = "只陈述事实，绝对不要给买入、卖出、持有建议，不要写目标价，也不要预测价格涨跌。"
 
-NEW_SECTIONS = [
-    ("ai_news", "AI公司", [
-        ("AI公司动态", 4,
-         "3. 只挑AI公司自己的重要发布或动向：新模型、产品功能、重大合作、融资、安全与政策声明。"
-         "教程类、客户案例类、纯评论类内容不要选"),
-    ]),
-    ("stocks", "股市", [
-        ("美股", 3,
-         "3. 只挑对美股大盘或大型上市公司有实质影响的消息（指数、利率、监管、重大公司事件）。\n"
+# (内容组 key, 抓取大类, [(子类, 选几条, 额外规则), ...])
+SECTION_SPECS = [
+    ("markets", "股票经济", [
+        ("美股", 2,
+         "3. 只挑对美股大盘或大型上市公司有实质影响的消息（指数、利率、监管、重大公司事件）\n"
          f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
-        ("财报", 3,
+        ("财报", 1,
          "3. 只挑公司发布财报/业绩的新闻。标题或摘要里有的关键数字（营收、利润、同比、是否超预期、业绩指引）要写出来，"
          "没有就不要编造数字；优先大型、知名的上市公司\n"
          f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
-        ("港股", 2,
+        ("港股", 1,
          "3. 只挑港股、恒生指数或在港上市公司相关的消息（重要公告、融资、供股、业绩、监管）\n"
          f"4. {NO_ADVICE_RULE}" + _WATCH_RULE),
+        ("宏观经济", 1,
+         "3. 只挑对中国或世界经济有实质影响的消息（增长、通胀、利率、贸易、产业政策、就业数据）\n"
+         f"4. {NO_ADVICE_RULE}"),
     ]),
-    ("games", "游戏", [
-        ("3A游戏资讯", 3,
-         "3. 只挑3A大作和大厂主机/PC游戏相关的资讯：新作公布、发售日期、重大更新、Steam 平台重要动态。"
-         "独立小游戏、折扣促销、攻略、设备优惠、评测汇总一律不要选"),
-        ("游戏公司", 2,
-         "3. 只挑游戏公司层面的新闻：财报、收购并购、裁员、工作室关闭、重大人事变动、行业政策。"
-         "单个游戏的更新补丁不要选"),
+    ("commodities", "石油黄金", [
+        ("石油能源", 3,
+         "3. 只挑原油、天然气和能源市场本身的消息：油价走势与原因、OPEC 及产油国决策、库存数据、重大供给中断、地缘影响。"
+         "新能源项目的宣传稿、公司人事不要选\n"
+         f"4. {NO_ADVICE_RULE}"),
+        ("黄金贵金属", 2,
+         "3. 只挑黄金、白银等贵金属价格和市场的消息：价格走势与驱动因素、央行购金、矿业重大事件。"
+         "外汇和股市的消息即使顺带提到金价也不要选\n"
+         f"4. {NO_ADVICE_RULE}"),
     ]),
-    ("design", "设计", [
-        ("设计", 3,
-         "3. 优先挑有影响力的设计新闻：知名设计师/事务所/品牌的新作品、重要展览与设计周（如米兰设计周）、"
-         "设计行业动向、意大利设计。纯商品促销不要选"),
-    ]),
-    ("europe", "欧洲与意大利", [
-        ("欧盟", 2,
-         "3. 只挑欧盟层面的政策、立法、经济、外交新闻，成员国国内的琐碎新闻不要选"),
-        ("意大利", 2,
-         "3. 优先挑意大利的重要新闻：政治经济、社会事件、罗马相关、教育和留学生相关政策（签证、居留、学费）。"
-         "娱乐和体育小新闻不要选"),
-    ]),
-    ("china", "国内要闻与政策", [
-        ("国内要闻", 2, ""),
-        ("政策走向", 2,
+    ("politics_mil", "政治军事", [
+        ("国际政治", 2,
+         "3. 只挑对世界格局有实质影响的政治外交新闻：选举、战争与停火谈判、制裁、重大条约、欧盟和意大利的重要政策。"
+         "评论文章和人物花边不要选"),
+        ("国内政策", 1,
          "3. 只挑具体的政策发布、法规修订、部委或监管机构的动作、产业/就业/教育政策走向。"
          "领导人活动报道、口号式宣传稿、纯文化稿件不要选\n"
          "4. 一句话点评要点出：这个政策实际影响谁、有什么变化"),
+        ("军事", 2,
+         "3. 只挑军事与国防本身的新闻：战争局势、重大装备与部署、军费和军事战略、军工产业。"
+         "纯评论、历史回顾、装备迷的产品介绍不要选"),
     ]),
-    ("film", "电影", [
-        ("电影", 3,
-         "3. 只挑电影本身的新闻：新片上映或定档、预告片、电影节与奖项、票房、重要导演和作品的动态、口碑评价。"
-         "明星八卦、感情生活、红毯穿搭、绯闻、演员私生活一律不要选"),
+    ("history_news", "历史", [
+        ("历史新闻", 2,
+         "3. 只挑有历史学价值的内容：考古新发现、历史研究的新结论、重要历史事件或人物的深度解读。"
+         "怀旧清单、影视剧集解析、文化八卦不要选"),
     ]),
-    ("music", "音乐", [
-        ("音乐", 3,
-         "3. 只挑音乐本身的新闻：新专辑的发布或宣布、重要单曲、高分或有代表性的专辑评论、巡演、音乐奖项、"
-         "重要音乐人的作品与逝世。明星八卦、恋情、绯闻、争吵、穿搭一律不要选"),
+    ("live_music", "音乐演出", [
+        ("音乐与演出", 5,
+         "3. 只挑音乐现场与演出本身的新闻：演唱会和巡演的宣布与回顾、音乐节、歌剧与交响乐演出、颁奖典礼的表演与结果、"
+         "重要音乐人的演出事件。明星八卦、恋情、争吵、穿搭一律不要选；单纯的新专辑发布留给「专辑影视」板块，这里不选"),
     ]),
-    ("art", "艺术", [
-        ("美术", 3,
+    ("design_art", "设计美术", [
+        ("设计", 2,
+         "3. 优先挑有影响力的设计新闻：知名设计师/事务所/品牌的新作品、重要展览与设计周（如米兰设计周）、"
+         "设计行业动向、意大利设计。纯商品促销不要选"),
+        ("美术", 2,
          "3. 只挑美术与艺术本身的新闻：重要展览、美术馆与博物馆动态、艺术家的作品与访谈、重要拍卖与艺术奖项、"
          "文物与艺术史的新发现。八卦和纯商业炒作不要选"),
     ]),
-    ("jobs", "招聘", [
-        ("大公司招聘动态", 3,
+    ("album_film", "专辑影视", [
+        ("新专辑", 2,
+         "3. 只挑新专辑本身：新专辑的发布或宣布、有代表性的专辑评论（高分或有争议的作品）。"
+         "演唱会、八卦、单曲花絮不要选"),
+        ("影视", 3,
+         "3. 只挑电影和电视剧本身的新闻：新片和新剧的上映/定档/首播、预告片、电影节与奖项、票房与口碑。"
+         "明星八卦、感情生活、红毯穿搭、绯闻一律不要选"),
+    ]),
+    ("ai_feeds", "人工智能", [
+        ("AI公司动态", 3,
+         "3. 只挑AI公司自己的重要发布或动向：新模型、产品功能、重大合作、融资、安全与政策声明。"
+         "教程类、客户案例类、纯评论类内容不要选"),
+    ]),
+    ("growth", "自我提升", [
+        ("自我提升文章", 2,
+         "3. 只挑有具体方法和依据的文章：学习方法、决策与思考、习惯与专注、时间管理。"
+         "鸡汤、空洞励志、广告软文、购物清单不要选\n"
+         "4. 一句话点评写出读完能带走的一个可操作要点"),
+    ]),
+    ("science_pc", "物理化学", [
+        ("物理", 3,
+         "3. 只挑真正的物理学发现或实验进展（量子、凝聚态、天体与宇宙、粒子、光学等），说清楚新发现是什么。"
+         "科普问答、人物访谈、测验题不要选"),
+        ("化学", 2,
+         "3. 只挑真正的化学发现或材料进展（新反应、新材料、催化、电池等），说清楚新发现是什么。"
+         "科普问答、人物访谈不要选"),
+    ]),
+    ("biotech", "生物科技", [
+        ("生物科技", 5,
+         "3. 只挑生物科技与医药研发的实质进展：药物审批和临床试验结果、基因与细胞疗法、生物技术新方法、重要融资与并购。"
+         "公司人事、会议预告不要选\n"
+         "4. 医药内容只陈述事实，不要写成对读者的用药或治疗建议"),
+    ]),
+    ("mind", "心灵疗养", [
+        ("心灵疗养文章", 4,
+         "3. 只挑有研究或实践依据的内容：冥想与正念练习、心理健康研究、情绪与压力调节、睡眠与身心恢复、哲学与心灵思考。"
+         "推销产品、神秘学、偏方疗法不要选\n"
+         "4. 涉及心理健康的内容只陈述研究和做法，不要写成医疗或诊断建议"),
+    ]),
+    ("jobs", "就业机会", [
+        ("大公司招聘动态", 5,
          "3. 候选里混有综合科技和商业新闻，只有和招聘、用工、裁员、薪资直接相关的才选，其余一律不选，宁可返回空。"
          "要选的是跟大公司招聘有关的新闻：校招/社招启动、扩招或缩招、裁员、薪资与岗位趋势、招聘要求变化。"
          "优先腾讯、字节、阿里、华为、美团、小米及海外科技/游戏/设计相关大公司；很久以前的宣讲会通知不要选\n"
          "4. 这里是招聘动态新闻，不是岗位列表，不要编造具体岗位或投递链接"),
     ]),
-    ("fashion", "时尚", [
-        ("时尚品牌", 3,
-         "3. 只挑时尚品牌与行业的重要新闻：新系列/联名、创意总监更替、秀场、财报与并购、行业趋势。"
-         "明星红毯穿搭、购物清单、促销一律不要选"),
-    ]),
 ]
 
-# 不是"新闻候选里挑几条"、而是单独生成的板块：YouTube 频道更新、每日一学（历史/诗词/艺术风格）
-SPECIAL_SECTION_KEYS = ["youtube", "history", "poem", "style"]
+# overview / jwc / action / greeting 是整体性的内容；其余 key 来自 layout.LAYOUT
+ALL_SECTION_KEYS = ["overview", "jwc", *layout.CONTENT_KEYS, "action", "greeting"]
 
-ALL_SECTION_KEYS = ["overview", "jwc", "top_picks", "tech",
-                    "economy", "politics", "science",
-                    *[k for k, _, _ in NEW_SECTIONS],
-                    *SPECIAL_SECTION_KEYS,
-                    "action", "greeting"]
 
 
 def generate_action_advice(jwc_text, tech_text, top_picks_text, economy_text, politics_text, science_text, extra_text=""):
@@ -879,23 +908,16 @@ if __name__ == "__main__":
         if not rss_data["items"]:
             rss_data = None
 
-    used_titles = set()
+    # ---------- 人工智能板块（上半）：GitHub 热门 / Hacker News / 科技媒体里和 AI 相关的内容 ----------
+    # 整个简报里 AI 只占「人工智能」一个板块（最多 5 条）：这里挑 2 条，下面的 AI 公司动态挑 3 条
     if github_data or hn_data or rss_data:
-        print("正在提取各榜单头名（AI自选信息完整的候选）...")
+        print(f"正在挑选人工智能相关的科技资讯（目标{TECH_TOP_N}条）...")
         try:
-            sections["top_picks"], used_titles = get_top_picks(github_data, hn_data, rss_data, seen_titles)
+            sections["ai_tech"] = summarize_tech(github_data, hn_data, rss_data, set(), "", seen_titles)
         except Exception as e:
-            print(f"  ⚠️ 各榜单头名生成失败，跳过：{e}")
-            sections["top_picks"] = ""
-        print(sections["top_picks"] + "\n")
-
-        print(f"正在总结科技资讯全览（目标{TECH_TOP_N}条，排除头名重复内容）...")
-        try:
-            sections["tech"] = summarize_tech(github_data, hn_data, rss_data, used_titles, sections["top_picks"], seen_titles)
-        except Exception as e:
-            print(f"  ⚠️ 科技资讯全览生成失败，跳过：{e}")
-            sections["tech"] = ""
-        print(sections["tech"] + "\n")
+            print(f"  ⚠️ 科技资讯生成失败，跳过：{e}")
+            sections["ai_tech"] = ""
+        print(sections.get("ai_tech", "") + "\n")
 
     category_data = load_json("category_news.json")
     if category_data:
@@ -903,49 +925,20 @@ if __name__ == "__main__":
         if not category_data["items"]:
             category_data = None
 
+    # ---------- 各板块：每个子类单独让AI挑，某一个失败不影响其他板块 ----------
     if category_data:
         items_by_key = {}
         for item in category_data["items"]:
             key = (item.get("category"), item.get("subcategory"))
             items_by_key.setdefault(key, []).append(item)
 
-        economy_parts = []
-        for sub_label in ("中国经济", "世界经济"):
-            items = items_by_key.get(("经济", sub_label), [])
-            if items:
-                print(f"正在筛选【{sub_label}】...")
-                result = safe_pick(sub_label, items, ECONOMY_SUB_N, seen_titles=seen_titles)
-                if result:
-                    economy_parts.append(result)
-        sections["economy"] = "\n".join(economy_parts)
-
-        politics_parts = []
-        for sub_label in ("国内时政", "国际时政"):
-            items = items_by_key.get(("政治", sub_label), [])
-            if items:
-                print(f"正在筛选【{sub_label}】...")
-                result = safe_pick(sub_label, items, POLITICS_SUB_N, seen_titles=seen_titles)
-                if result:
-                    politics_parts.append(result)
-        sections["politics"] = "\n".join(politics_parts)
-
-        science_items = items_by_key.get(("科学突破", "科学突破"), [])
-        if science_items:
-            print(f"正在筛选【科学突破】（目标{SCIENCE_TOP_N}条）...")
-            science_rule = "3. 只挑真正的科学发现/技术突破类内容，如果这条新闻本质是政治决策/经济决策/商业博弈（哪怕看起来跟科技沾边，比如政府叫停某个项目、公司之间的商业纠纷），坚决不要选，即使找不到符合条件的新闻也不要凑数"
-            sections["science"] = safe_pick("科学突破", science_items, SCIENCE_TOP_N, science_rule, seen_titles=seen_titles)
-            print(sections["science"] + "\n")
-
-    # ---------- 新增板块：每个子类单独让AI挑，某一个失败不影响其他板块 ----------
-    if category_data:
-        dedupe = list(seen_titles)  # 之前推送过的 + 本次已选的标题，避免不同板块/不同时段重复同一件事
-        for k in ("top_picks", "tech", "economy", "politics", "science"):
-            dedupe.extend(titles_from(sections.get(k, "")))
-        for key, category, subs in NEW_SECTIONS:
+        dedupe = list(seen_titles) + titles_from(sections.get("ai_tech", ""))  # 之前推过的 + 本次已选的标题
+        for key, category, subs in SECTION_SPECS:
             parts = []
             for sub_label, top_n, rule in subs:
                 items = items_by_key.get((category, sub_label), [])
                 if not items:
+                    print(f"（【{category}-{sub_label}】没有候选，跳过）")
                     continue
                 print(f"正在筛选【{category}-{sub_label}】（目标{top_n}条）...")
                 try:
@@ -959,7 +952,7 @@ if __name__ == "__main__":
                     print(result + "\n")
             sections[key] = "\n".join(parts)
 
-    # ---------- YouTube 频道更新 ----------
+    # ---------- YouTube 频道更新（并入「自我提升」板块） ----------
     yt_data = load_json("youtube.json")
     if yt_data:
         seen_ts = {}
@@ -975,7 +968,7 @@ if __name__ == "__main__":
         if sections.get("youtube"):
             print(sections["youtube"] + "\n")
 
-    # ---------- 每日一学：历史上的今天 / 诗词 / 艺术风格 ----------
+    # ---------- 历史上的今天（中外历史）/ 艺术风格小课（设计美术）/ 每日诗词（心灵疗养） ----------
     for key, builder, label in (("history", learning.build_history, "历史上的今天"),
                                 ("poem", learning.build_poem, "每日诗词"),
                                 ("style", learning.build_style, "艺术风格小课")):
@@ -988,14 +981,16 @@ if __name__ == "__main__":
         if sections.get(key):
             print(sections[key] + "\n")
 
-    # 其他板块的文字，给行动建议参考（YouTube 和每日一学不放进去，行动建议只基于新闻）
-    extra_text = "\n\n".join(
-        f"【{key}】\n{sections[key]}" for key, _, _ in NEW_SECTIONS if sections.get(key)
-    )
+    # 每个板块最多 5 条：AI 偶尔会多给，这里强制裁掉多出来的
+    trimmed = layout.apply_caps(sections)
+    if trimmed:
+        print(f"（有 {trimmed} 条超出板块上限，已裁掉）")
+
+    # 给行动建议参考的新闻文字（YouTube、历史、诗词、艺术风格不放进去，行动建议只基于新闻）
+    news_keys = [k for k in layout.CONTENT_KEYS if k not in layout.NON_NEWS_KEYS]
+    extra_text = "\n\n".join(f"【{key}】\n{sections[key]}" for key in news_keys if sections.get(key))
     # 总览要覆盖"这半天内全世界值得关注的事"：把各新闻板块的内容合在一起给 AI 归纳
-    overview_keys = ("tech", "ai_news", "politics", "economy", "china", "europe", "stocks",
-                     "film", "music", "art", "design", "games", "science")
-    tech_for_overview = "\n".join(sections[k] for k in overview_keys if sections.get(k)) or "无"
+    tech_for_overview = "\n".join(sections[k] for k in news_keys if sections.get(k)) or "无"
     has_content = any(sections.get(k) for k in ALL_SECTION_KEYS if k not in ("overview", "action", "greeting"))
 
     if has_content:
@@ -1008,11 +1003,11 @@ if __name__ == "__main__":
         print("正在生成今日行动建议（学生视角，禁止职场黑话）...")
         sections["action"] = safe_text("今日行动建议", generate_action_advice,
             sections.get("jwc", "无"),
-            sections.get("tech", "无"),
-            sections.get("top_picks", "无"),
-            sections.get("economy", "无"),
-            sections.get("politics", "无"),
-            sections.get("science", "无"),
+            sections.get("ai_tech", "无"),
+            "无",
+            "无",
+            "无",
+            "无",
             extra_text,
         )
         print(sections["action"] + "\n")

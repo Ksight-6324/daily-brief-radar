@@ -16,7 +16,7 @@ import re
 from datetime import datetime, timedelta
 
 RECENT_HOURS = 72
-MAX_NEW_PER_CHANNEL = 2
+MAX_NEW_PER_CHANNEL = 1  # 「自我提升」板块上限 5 条：3 个频道各 1 条，另外 2 条留给文章
 TRANSCRIPT_CHARS = 6000
 TRANSCRIPT_LANGS = ["zh-Hans", "zh-Hant", "zh", "zh-CN", "zh-TW", "en"]
 

@@ -13,6 +13,8 @@ import os
 import re
 import smtplib
 from html import escape as esc
+
+import layout
 from email.mime.text import MIMEText
 from email.header import Header
 
@@ -38,27 +40,7 @@ MAX_EMAIL_KB = 95  # 单封邮件大小上限，超过就拆成两封（Gmail �
 SLOT_GREETING = {"noon": "午安", "evening": "晚上好", "morning": "早安"}
 SLOT_TAG = {"noon": "午报", "evening": "晚报", "morning": "早报"}
 
-# 邮件里"科技资讯全览"之后依次显示的板块：(daily_brief.md 里的 key, 邮件标题)
-EXTRA_SECTIONS = [
-    ("politics", "🏛 政治（国内 · 国际）"),
-    ("economy", "💰 经济（中国 · 世界）"),
-    ("china", "🇨🇳 国内要闻与政策"),
-    ("europe", "🇪🇺 欧盟 · 意大利"),
-    ("stocks", "📈 美股 · 港股 · 财报"),
-    ("ai_news", "🤖 AI公司动态"),
-    ("music", "🎵 音乐与新专辑"),
-    ("film", "🎬 电影"),
-    ("art", "🖼 美术与展览"),
-    ("design", "🎨 设计"),
-    ("games", "🎮 3A游戏与游戏公司"),
-    ("fashion", "👗 时尚品牌"),
-    ("jobs", "💼 大公司招聘动态"),
-    ("science", "🔬 科学突破"),
-    ("youtube", "▶️ 关注的频道更新"),
-    ("history", "🏺 历史上的今天"),
-    ("poem", "📜 每日诗词"),
-    ("style", "🖌 艺术风格小课"),
-]
+# 板块的顺序、标题和每组条数上限在 core/layout.py 的 LAYOUT 里调整（邮件和摘要脚本共用同一份）
 
 _LEADING_MARKER_RE = re.compile(r"^[\s\-\*•·]*(\d+[\.\、\)]\s+)?")
 
@@ -76,7 +58,7 @@ def _split_line(line, min_parts):
 def parse_brief(content):
     date = ""
     slot = "morning"
-    keys = ["overview", "jwc", "top_picks", "tech", "action", "greeting"] + [k for k, _ in EXTRA_SECTIONS]
+    keys = ["overview", "jwc", "action", "greeting"] + layout.CONTENT_KEYS
     sections = {k: "" for k in keys}
     current = None
     for line in content.split("\n"):
@@ -396,21 +378,23 @@ def render_greeting(text):
     return opening, closing
 
 
-def build_html(date, slot, sections, extra_keys=None, continuation=False):
-    """extra_keys：只渲染这些扩展板块（None=全部）；continuation=True：生成"续篇"邮件，只含扩展板块，
-    用于内容太多、一封装不下（Gmail 超过约 102KB 会截断）时拆成两封。"""
-    if extra_keys is None:
-        extra_keys = [k for k, _ in EXTRA_SECTIONS]
+def build_html(date, slot, sections, section_idx=None, continuation=False):
+    """section_idx：只渲染 layout.LAYOUT 里这些位置的板块（None=全部）；
+    continuation=True：生成"续篇"邮件，只含这些板块，用于内容太多、一封装不下
+    （Gmail 超过约 102KB 会截断）时拆成两封。"""
+    if section_idx is None:
+        section_idx = range(len(layout.LAYOUT))
     overview_html, todo = render_overview(sections["overview"])
     jwc_html = render_jwc_cards(sections["jwc"])
-    top_picks_html = render_top_picks(sections["top_picks"])
-    tech_html = render_content_cards(sections["tech"])
 
+    # 按布局依次渲染各板块；板块里每一组内容用各自的版式（新闻卡片 / 频道 / 历史 / 诗词 / 风格小课）
     extra_sections_html = ""
-    for key, title in EXTRA_SECTIONS:
-        if key not in extra_keys:
-            continue
-        content = SECTION_RENDERERS.get(key, render_content_cards)(sections.get(key, ""))
+    for idx in section_idx:
+        title, groups = layout.LAYOUT[idx]
+        content = "".join(
+            SECTION_RENDERERS.get(key, render_content_cards)(sections.get(key, ""))
+            for key, _ in groups
+        )
         if content:
             extra_sections_html += f'''
             <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:26px;">{title}</h2>
@@ -464,12 +448,6 @@ def build_html(date, slot, sections, extra_keys=None, continuation=False):
 
         {jwc_block}
 
-        <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:26px;">🏆 各榜单头名</h2>
-        {top_picks_html}
-
-        <h2 style="font-size:18px; color:{COLOR_DARK}; margin-top:26px;">科技资讯全览</h2>
-        {tech_html}
-
         {extra_sections_html}
 
         {action_html}
@@ -494,16 +472,16 @@ def send_brief_email():
     def mini(html):
         return re.sub(r"\n\s*", "", html)
 
-    all_keys = [k for k, _ in EXTRA_SECTIONS]
+    all_idx = list(range(len(layout.LAYOUT)))
     full = mini(build_html(date, slot, sections))
     print(f"邮件大小：{len(full.encode('utf-8')) / 1024:.1f} KB（上限 {MAX_EMAIL_KB} KB）")
     emails = [(f"每日简报·{slot_tag} {date}", full)]
     if len(full.encode("utf-8")) > MAX_EMAIL_KB * 1024:
         # 从多到少尝试：第一封放尽可能多的板块，剩下的放进第二封
-        for k in range(len(all_keys) - 1, 0, -1):
-            part1 = mini(build_html(date, slot, sections, extra_keys=all_keys[:k]))
+        for k in range(len(all_idx) - 1, 0, -1):
+            part1 = mini(build_html(date, slot, sections, section_idx=all_idx[:k]))
             if len(part1.encode("utf-8")) <= MAX_EMAIL_KB * 1024 or k == 1:
-                part2 = mini(build_html(date, slot, sections, extra_keys=all_keys[k:], continuation=True))
+                part2 = mini(build_html(date, slot, sections, section_idx=all_idx[k:], continuation=True))
                 emails = [(f"每日简报·{slot_tag} {date}（1/2）", part1),
                           (f"每日简报·{slot_tag} {date}（2/2）", part2)]
                 print(f"内容较多，拆成两封发送：{len(part1.encode('utf-8')) / 1024:.1f} KB + {len(part2.encode('utf-8')) / 1024:.1f} KB")
