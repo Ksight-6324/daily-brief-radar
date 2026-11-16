@@ -107,3 +107,18 @@ SECTION|||jobs
             rows = conn.execute("SELECT status,task_type FROM delivery_log").fetchall()
         expected = [("pending", "daily_brief")] if now.astimezone(BEIJING).hour >= 8 else []
         self.assertEqual([(row["status"], row["task_type"]) for row in rows], expected)
+
+    def test_backup_command_writes_a_consistent_copy_with_the_token_key(self):
+        account = self.store.register("saved@example.com", ["ai"], NOW)
+        root = Path(__file__).resolve().parents[1]
+        env = {**os.environ, "PYTHONPATH": str(root), "BRIEF_DB_PATH": str(self.store.path)}
+        env.pop("BRIEF_TOKEN_SECRET", None)
+        target = self.store.path.parent / "saved"
+        result = subprocess.run([sys.executable, "-m", "subscription.cli", "backup", "--to", str(target)],
+                                cwd=self.store.path.parent, env=env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        copy = Path(json.loads(result.stdout)["backup"])
+        from subscription.store import Store
+        restored = Store(copy)
+        self.assertEqual(restored.subscriber(account["id"])["email"], "saved@example.com")
+        self.assertEqual(restored.token(restored.subscriber(account["id"])), self.store.token(self.store.subscriber(account["id"])))

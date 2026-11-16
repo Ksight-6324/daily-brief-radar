@@ -3,8 +3,11 @@
 import argparse
 import json
 import os
+import shutil
+import sqlite3
 import subprocess
 import time
+from contextlib import closing
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,6 +24,8 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
     commands.add_parser("status")
+    backup = commands.add_parser("backup")
+    backup.add_argument("--to", default="backups")
     commands.add_parser("scan")
     commands.add_parser("publish")
     commands.add_parser("generate")
@@ -88,6 +93,20 @@ def main():
             if not args.watch:
                 break
             time.sleep(60)
+    elif args.command == "backup":
+        # SQLite's online backup is consistent while the API, worker and scheduler keep running.
+        target = Path(args.to)
+        target.mkdir(parents=True, exist_ok=True)
+        destination = target / f"brief-{now:%Y%m%d-%H%M%S}.db"
+        with store.connect() as source, closing(sqlite3.connect(destination)) as copy:
+            source.backup(copy)
+        key = store.path.with_suffix(store.path.suffix + ".key")
+        if key.exists():
+            shutil.copy2(key, destination.with_suffix(".db.key"))
+        for saved in (destination, destination.with_suffix(".db.key")):
+            if saved.exists():
+                os.chmod(saved, 0o600)
+        print(json.dumps({"backup": str(destination)}))
     elif args.command == "status":
         with store.connect() as conn:
             statuses = {row["status"]: row["count"] for row in conn.execute("SELECT status,count(*) AS count FROM delivery_log GROUP BY status")}

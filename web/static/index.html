@@ -7,7 +7,7 @@
       name="description"
       content="北京时间每天早八点、晚八点各一封文字简报。15 个主题自由选择，周付 3 元，主动确认订阅，随时退订。"
     />
-    <meta name="theme-color" content="#edf2eb" />
+    <meta name="theme-color" content="#f4f1e8" />
     <title>Daily Brief Radar · 把今天的世界补全</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="stylesheet" href="/static/style.css" />
@@ -18,8 +18,9 @@
     <div class="site-shell">
       <header class="site-header">
         <a class="wordmark" href="/" aria-label="Daily Brief Radar 首页"
-          >DAILY BRIEF RADAR<span class="brand-dot" aria-hidden="true"></span
-        ></a>
+          ><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span
+          >DAILY BRIEF RADAR</a
+        >
         <nav aria-label="主导航">
           <a href="/#preview">今日简报</a><a href="/#plans">订阅方案</a
           ><a id="home-link" href="/manage">我的主页</a>
@@ -30,12 +31,16 @@
         <div id="landing">
           <section class="intro-grid" aria-labelledby="headline">
             <div class="intro-copy">
-              <h1 id="headline">花三分钟，<br />把今天的<br />世界补全。</h1>
+              <h1 id="headline">花<span class="accent">三分钟</span>，<br />把今天的<br />世界补全。</h1>
               <p class="intro-description">
                 每天早晚，用文字简报读懂值得关注的事。
               </p>
               <p class="delivery-time">北京时间 08:00 / 20:00 · 每日两封</p>
               <a class="button hero-action" href="#subscribe">选择关注主题</a>
+              <div class="hero-shapes" aria-hidden="true">
+                <span class="shape-circle"></span><span class="shape-square"></span
+                ><span class="shape-triangle"></span>
+              </div>
             </div>
 
             <article

@@ -135,3 +135,57 @@ git diff --check
 - `GET /api/feed` 读取已冻结的快照。试读、付费或宽限期内的读者可看近 14 期，其余读者只能看最新一期。
 - 邮件中所选主题全部展开并排在最前，其余放入“其他值得一扫”。未选择主题时使用通用版三条必知。
 - worker 先处理确认、登录和续费类邮件，再处理批量简报。
+
+## 用户数据存储与数据库搭建
+
+### 存在哪里
+
+用户注册后，数据写入服务器上的一个 SQLite 文件，路径由 `BRIEF_DB_PATH` 指定，本地默认 `var/brief.db`。同目录会出现两个运行时文件：`brief.db-wal` 与 `brief.db-shm`（WAL 日志，不要单独删除）。令牌签名密钥来自 `BRIEF_TOKEN_SECRET`，未设置时保存为 `brief.db.key`。数据库、密钥、`.env` 和 `backups/` 都被 `.gitignore` 排除，不会进入 Git。
+
+网页、调度器和 worker 三个进程连接同一个文件，不存在单独的“数据库服务”。
+
+### 存了什么
+
+| 表 | 内容 | 个人信息 |
+| --- | --- | --- |
+| `subscribers` | 邮箱、状态、所选主题、剩余试读、确认与退订时间、令牌随机数 | 邮箱、偏好 |
+| `orders` | 订单号、套餐、金额、支付宝交易号、收款链接 | 交易号 |
+| `subscriptions` | 到期时间，只能由已付款订单推导 | 无 |
+| `daily_issue` | 每期冻结的内容快照，所有人共用 | 无 |
+| `delivery_log` | 每封邮件的收件人、完整正文、状态、重试次数、服务商邮件 ID | 邮箱、阅读内容 |
+| `renewal_reminders` | 每个续费周期已发的提醒 | 无 |
+| `request_limits` | 限流计数，键里是邮箱或 IP 的 SHA-256 哈希 | 哈希值 |
+
+没有保存的内容：**密码**（登录靠邮件里的签名链接，系统里没有密码字段）、银行卡或支付宝账号（只保存支付宝返回的交易号）。读者的登录令牌由服务器用密钥现算现验，服务器不存令牌本身，浏览器把它保存在自己的 localStorage 里。
+
+### 怎么搭建
+
+SQLite 随 Python 自带，不需要安装数据库软件。
+
+1. 选一块会保留数据的磁盘，建立目录并收紧权限，例如 `/var/lib/brief`（Linux 上 `chmod 700`）。
+2. 配置环境变量，写入服务器上的 `.env` 或进程管理器：
+   - `BRIEF_DB_PATH=/var/lib/brief/brief.db`
+   - `BRIEF_TOKEN_SECRET=` 一个至少 32 字符的随机值，可用 `python -c "import secrets; print(secrets.token_hex(32))"` 生成，生成后单独备份。
+3. 初始化：`python -m subscription.cli init`。建表与版本升级是自动的，在一个事务里完成，已有数据保留。网页、worker、调度器启动时也会自动执行。
+4. 启动三个进程，确认都读同一个 `BRIEF_DB_PATH`。
+5. 用 `python -m subscription.cli status` 查看发送队列状态，或用 `sqlite3` 直接查询，例如 `sqlite3 brief.db "select status, count(*) from subscribers group by status"`。
+
+必须遵守的限制：
+
+- 三个进程要在同一台机器上，数据库放本机磁盘。不要放在网络共享盘上，也不要部署到磁盘会重置的环境，例如无状态的函数计算或免费套餐的临时磁盘，否则重启后用户全部丢失。
+- worker 在调用邮件服务商期间持有写锁，当前规模适合几千订阅者以内。再大需要改批量发送或迁移到 PostgreSQL。迁移时 `subscription/store.py` 是主要的数据访问层，但 `subscription/delivery.py` 和 `web/app.py` 也直接使用 SQLite 连接，需要一并改。
+
+### 备份与恢复
+
+```bash
+python -m subscription.cli backup --to /path/to/backups
+```
+
+该命令使用 SQLite 在线备份，进程不用停止，输出带时间戳的 `.db` 文件，并一并复制 `.db.key`（若使用文件密钥）。备份文件含有全部用户邮箱，权限被设为仅所有者可读。建议每天定时执行，并复制到另一台机器或对象存储。
+
+恢复：停止三个进程，把备份的 `.db` 放回 `BRIEF_DB_PATH`，把对应的密钥文件放回同目录（或使用同一个 `BRIEF_TOKEN_SECRET`），再启动。密钥不一致时，所有已发出的管理链接和退订链接会失效。
+
+### 已知缺口
+
+- 没有“删除我的数据”的功能。退订只改变状态，保留邮箱用于阻止重复发送。公开上线前，需要在隐私政策里说明保留规则，并提供按请求删除的流程。
+- `delivery_log` 保存完整邮件正文，没有清理策略，会随时间增长。建议成功发送满一定天数后清理正文。
