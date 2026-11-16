@@ -78,6 +78,24 @@ class DeliveryTest(StoreCase):
         legacy_html, _ = render_issue("2026-11-15", SECTIONS, ["gaming"], "https://brief.example.com", "token")
         self.assertIn("市场消息", legacy_html)
 
+    def test_followed_topics_are_all_expanded_and_the_rest_are_folded(self):
+        from subscription.store import SECTIONS as TOPICS
+        expanded = {key: f"官方|||{label}新闻|||https://example.com/{key}|||主题|||事实|||影响" for key, label in TOPICS.items()}
+        followed = ["jobs", "ai", "gaming", "history", "mind"]
+        html, text = render_issue("2026-11-15", expanded, followed, "https://brief.example.com", "token")
+        fold = html.index("<details>")
+        for key in followed:
+            self.assertLess(html.index(f'id="section-{key}"'), fold)
+        self.assertGreater(html.index('id="section-markets"'), fold)
+        self.assertIn("你关注的主题", html)
+        self.assertEqual(text.count("其他值得一扫"), 1)
+        general, _ = render_issue("2026-11-15", expanded, [], "https://brief.example.com", "token")
+        self.assertIn("本期三条必知", general)
+        self.assertLess(general.index('id="section-politics_mil"'), general.index("<details>"))
+        self.assertGreater(general.index('id="section-history"'), general.index("<details>"))
+        unavailable, _ = render_issue("2026-11-15", {"markets": expanded["markets"]}, ["jobs"], "https://brief.example.com", "token")
+        self.assertNotIn("<details>", unavailable)
+
     def test_scan_and_worker_are_idempotent_and_consume_one_trial(self):
         account = self.subscriber()
         self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 1)

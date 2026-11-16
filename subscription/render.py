@@ -18,13 +18,23 @@ def links(base_url, token):
     return f"{base_url}/manage#{value}", f"{base_url}/unsubscribe#{value}"
 
 
-def card(text):
+def parse_card(text):
+    """Split one frozen story line into its six fields, or None for free text."""
     line = next((line.strip() for line in text.splitlines() if "|||" in line), "")
     if not line:
-        return f"<p>{escape(text)}</p>", text, "以原始来源的后续更新为准。"
+        return None
     parts = (line.split("|||") + [""] * 6)[:6]
     source, title, url, tags, summary, importance = [part.strip() for part in parts]
-    url = safe_link(url)
+    return {"source": source, "title": title, "url": safe_link(url), "tags": tags,
+            "summary": summary, "importance": importance}
+
+
+def card(text):
+    story = parse_card(text)
+    if story is None:
+        return f"<p>{escape(text)}</p>", text, "以原始来源的后续更新为准。"
+    source, title, url = story["source"], story["title"], story["url"]
+    tags, summary, importance = story["tags"], story["summary"], story["importance"]
     source_link = f'<a href="{escape(url, quote=True)}" style="color:#285440">阅读来源 · {escape(source)}</a>' if url else escape(source)
     html = (f'<p style="font-size:12px;color:#6a776c">{escape(tags)}</p>'
             f'<h3 style="font-size:20px;margin:8px 0">{escape(title)}</h3>'
@@ -37,13 +47,18 @@ def render_issue(issue_date, sections, selected, base_url, token, grace=False, e
     available = [key for key in SECTIONS if key in sections]
     selected = [key for key in available if key in selected]
     ordered = selected + [key for key in available if key not in selected]
-    label = "本期必知" if len(ordered) < 3 else "本期三条必知"
+    # Followed topics are always expanded. Without a usable selection the issue keeps its general layout.
+    featured = len(selected) if selected else 3
+    if selected:
+        label = "你关注的主题"
+    else:
+        label = "本期必知" if len(ordered) < 3 else "本期三条必知"
     content = [f'<h2 style="font-size:15px;letter-spacing:1px">{label}</h2>']
     heading = issue_date + (" · " + EDITIONS[edition][1] if edition else "")
     text_parts = [f"Daily Brief Radar · {heading}", label]
     observation = ""
     for index, key in enumerate(ordered):
-        if index == 3:
+        if index == featured:
             content.append('<details><summary style="font-size:15px;border-top:1px solid #dce3d8;padding-top:24px">其他值得一扫</summary>')
             text_parts.append("其他值得一扫")
         html, text, hint = card(sections[key])
@@ -51,7 +66,7 @@ def render_issue(issue_date, sections, selected, base_url, token, grace=False, e
         text_parts.append(text)
         if not observation:
             observation = hint
-    if len(ordered) > 3:
+    if len(ordered) > featured:
         content.append("</details>")
     banner = "你的订阅已到期，目前处于三天宽限期。请续费以继续收到简报。" if grace else ""
     manage_url, unsubscribe_url = links(base_url, token)
