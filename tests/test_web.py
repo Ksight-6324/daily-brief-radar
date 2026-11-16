@@ -1,6 +1,7 @@
 import json
 
 from fastapi.testclient import TestClient
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from subscription.delivery import Delivery
 from tests.support import NOW, StoreCase
@@ -33,6 +34,19 @@ class WebTest(StoreCase):
         self.assertEqual(response.status_code, 200)
         saved = self.client.get("/api/account", headers=self.headers(account)).json()["preferences"]
         self.assertEqual(set(saved), set(selected))
+
+    def test_proxy_clients_have_separate_rate_limits_and_cannot_skip_their_own_limit(self):
+        # Compose trusts Caddy on its private network and publishes only Caddy's ports.
+        proxy_app = ProxyHeadersMiddleware(self.client.app, trusted_hosts="*")
+        with TestClient(proxy_app, client=("172.20.0.5", 40000)) as client:
+            for index in range(20):
+                response = client.post("/api/subscribe", headers={"X-Forwarded-For": "198.51.100.10"},
+                    json={"email": f"proxy-{index}@example.invalid", "preferences": [], "consent": True})
+                self.assertEqual(response.status_code, 200)
+            self.assertEqual(client.post("/api/subscribe", headers={"X-Forwarded-For": "198.51.100.10"},
+                json={"email": "proxy-limit@example.invalid", "preferences": [], "consent": True}).status_code, 429)
+            self.assertEqual(client.post("/api/subscribe", headers={"X-Forwarded-For": "198.51.100.11"},
+                json={"email": "proxy-other@example.invalid", "preferences": [], "consent": True}).status_code, 200)
 
     def test_a_delivered_login_link_expires_and_cannot_be_extended_by_editing_its_timestamp(self):
         import re

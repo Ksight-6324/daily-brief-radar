@@ -6,7 +6,7 @@ x-app: &app
   build: .
   image: daily-brief-radar:latest
   env_file: .env
-  environment:
+  environment: &app-environment
     BRIEF_MODE: subscription
     BRIEF_DB_PATH: /data/brief.db
     BRIEF_SEEN_FILE: /data/seen_items.json
@@ -24,6 +24,10 @@ x-app: &app
 services:
   api:
     <<: *app
+    # Port 8000 is reachable only inside this application's network. Caddy sets client headers.
+    environment:
+      <<: *app-environment
+      FORWARDED_ALLOW_IPS: "*"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
       interval: 30s
