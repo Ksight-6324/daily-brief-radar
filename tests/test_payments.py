@@ -1,6 +1,7 @@
 import base64
 import json
 import unittest
+from datetime import timedelta
 from unittest.mock import patch
 
 import requests
@@ -82,6 +83,29 @@ class PaymentTest(StoreCase):
         with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"], valid=False)):
             with self.assertRaises(ValueError):
                 self.provider.precreate(order, NOW)
+
+    def test_retrying_precreate_keeps_the_original_payment_deadline(self):
+        from fastapi.testclient import TestClient
+        from web.app import create_app
+        account = self.subscriber()
+        order = self.store.create_order(account["id"], "weekly", NOW)
+        headers = {"Authorization": "Bearer " + account["manage_token"]}
+        with TestClient(create_app(self.store, payment=self.provider)) as client:
+            with patch("web.app.utcnow", return_value=NOW), patch("subscription.payments.utcnow", return_value=NOW):
+                with patch("subscription.payments.requests.post", side_effect=requests.ConnectionError):
+                    self.assertEqual(client.post("/api/orders", headers=headers, json={"plan": "weekly"}).status_code, 502)
+            retry = NOW + timedelta(minutes=24)
+            with patch("web.app.utcnow", return_value=retry), patch("subscription.payments.utcnow", return_value=retry):
+                with patch("subscription.payments.requests.post", return_value=self.gateway_response(order["order_token"])) as gateway:
+                    response = client.post("/api/orders", headers=headers, json={"plan": "weekly"})
+            self.assertEqual(response.status_code, 200, response.text)
+            business = json.loads(gateway.call_args.kwargs["data"]["biz_content"])
+            self.assertEqual(business.get("time_expire"), "2026-11-15 19:30:00")
+            self.assertNotIn("timeout_express", business)
+            with self.assertRaises(ValueError):
+                self.store.delete_account(account["id"], NOW + timedelta(minutes=29))
+            with self.assertRaises(ValueError):
+                self.provider.precreate_parameters(order, NOW + timedelta(minutes=30))
 
     def test_weekly_order_uses_three_yuan_in_signed_precreate_and_callback(self):
         from fastapi.testclient import TestClient

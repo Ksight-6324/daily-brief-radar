@@ -34,6 +34,30 @@ class WebTest(StoreCase):
         saved = self.client.get("/api/account", headers=self.headers(account)).json()["preferences"]
         self.assertEqual(set(saved), set(selected))
 
+    def test_a_delivered_login_link_expires_and_cannot_be_extended_by_editing_its_timestamp(self):
+        import re
+        from datetime import timedelta
+        from unittest.mock import patch
+        delivery = Delivery(self.store, "https://brief.example.com", "Brief <brief@example.com>")
+        account = self.subscriber("login-expiry@example.com")
+        delivery.enqueue_login("login-expiry@example.com", NOW)
+        with self.store.connect() as conn:
+            payload = json.loads(conn.execute("SELECT payload FROM delivery_log WHERE task_type='login_link'").fetchone()[0])
+        token = re.search(r"/manage#([^\s<]+)", payload["text"]).group(1)
+        headers = {"Authorization": "Bearer " + token}
+        with patch("subscription.store.utcnow", return_value=NOW + timedelta(minutes=59)):
+            self.assertEqual(self.client.get("/api/account", headers=headers).status_code, 200)
+        with patch("subscription.store.utcnow", return_value=NOW + timedelta(hours=1)):
+            self.assertEqual(self.client.get("/api/account", headers=headers).status_code, 401)
+            self.assertEqual(self.client.post("/api/account/delete", headers=headers,
+                json={"confirm_email": "login-expiry@example.com"}).status_code, 401)
+        parts = token.split(".")
+        self.assertEqual(len(parts), 3)
+        parts[1] = str(int(parts[1]) + 86400)
+        with patch("subscription.store.utcnow", return_value=NOW):
+            self.assertEqual(self.client.get("/api/account", headers={"Authorization": "Bearer " + ".".join(parts)}).status_code, 401)
+        self.assertEqual(self.client.get("/api/account", headers=self.headers(account)).status_code, 200)
+
     def test_subscribe_requires_consent_and_queues_confirmation(self):
         values = {"email": "new@example.com", "preferences": ["jobs"], "consent": False}
         self.assertEqual(self.client.post("/api/subscribe", json=values).status_code, 422)

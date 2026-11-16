@@ -105,20 +105,36 @@ class Store:
     def email_digest(self, email):
         return hmac.new(self.secret, b"deleted-email:" + email.encode(), hashlib.sha256).hexdigest()
 
-    def token(self, row, purpose="manage"):
+    def token(self, row, purpose="manage", expires_at=None):
         message = f"{row['id']}.{row['token_nonce']}.{purpose}"
+        prefix = row["id"]
+        if expires_at is not None:
+            expiry = str(int(expires_at.timestamp()))
+            message += "." + expiry
+            prefix += "." + expiry
         signature = hmac.new(self.secret, message.encode(), hashlib.sha256).hexdigest()
-        return f"{row['id']}.{signature}"
+        return f"{prefix}.{signature}"
 
     def account_for_token(self, token, purpose="manage", conn=None):
-        if not isinstance(token, str) or len(token) > 160:
+        if not isinstance(token, str) or len(token) > 160 or not token.isascii():
             raise ValueError("链接无效")
-        subscriber_id = token.split(".", 1)[0]
+        parts = token.split(".")
+        expires_at = None
+        if len(parts) == 3:
+            try:
+                expires_at = datetime.fromtimestamp(int(parts[1]), timezone.utc)
+            except (ValueError, OverflowError, OSError) as error:
+                raise ValueError("链接无效") from error
+            if expires_at <= utcnow():
+                raise ValueError("链接已过期，请重新申请登录")
+        elif len(parts) != 2:
+            raise ValueError("链接无效")
+        subscriber_id = parts[0]
         if conn is None:
             with self.connect() as connection:
                 return self.account_for_token(token, purpose, connection)
         row = conn.execute("SELECT * FROM subscribers WHERE id=?", (subscriber_id,)).fetchone()
-        if row is None or not hmac.compare_digest(self.token(row, purpose), token):
+        if row is None or not hmac.compare_digest(self.token(row, purpose, expires_at=expires_at), token):
             raise ValueError("链接无效")
         return dict(row)
 

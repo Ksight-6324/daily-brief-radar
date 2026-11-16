@@ -4,6 +4,7 @@ import base64
 import json
 import os
 from decimal import Decimal, InvalidOperation
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import requests
@@ -60,10 +61,14 @@ class Alipay:
     def precreate_parameters(self, order, now=None):
         if not self.app_id or not self.seller_id or not self.private_key or not self.notify_url.startswith("https://"):
             raise ValueError("支付服务尚未配置完整")
+        now = now or utcnow()
+        deadline = datetime.fromisoformat(order["created_at"]) + timedelta(minutes=30)
+        if now >= deadline:
+            raise ValueError("支付订单已过期，请重新创建")
         business = {"out_trade_no": order["order_token"], "total_amount": f"{order['amount'] / 100:.2f}",
-                    "subject": "Daily Brief Radar 简报订阅", "timeout_express": "30m"}
+                    "subject": "Daily Brief Radar 简报订阅", "time_expire": deadline.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S")}
         values = {"app_id": self.app_id, "method": "alipay.trade.precreate", "format": "JSON", "charset": "utf-8",
-                  "sign_type": "RSA2", "timestamp": (now or utcnow()).astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S"),
+                  "sign_type": "RSA2", "timestamp": now.astimezone(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M:%S"),
                   "version": "1.0", "notify_url": self.notify_url,
                   "biz_content": json.dumps(business, ensure_ascii=False, separators=(",", ":"))}
         key = serialization.load_pem_private_key(self.private_key.replace("\\n", "\n").encode(), password=None)

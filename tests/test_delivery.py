@@ -250,7 +250,14 @@ class DeliveryTest(StoreCase):
         self.assertEqual(self.delivery.run_once(NOW), "success")
         path, _, body = ProviderHandler.calls[0]
         self.assertEqual(body["to"], ["login@example.com"])
-        self.assertIn("/manage#" + account["manage_token"], body["html"])
+        import re
+        token = re.search(r"/manage#([^\s<]+)", body["text"]).group(1)
+        self.assertNotEqual(token, account["manage_token"])
+        with patch("subscription.store.utcnow", return_value=NOW + timedelta(minutes=59)):
+            self.assertEqual(self.store.account_for_token(token)["id"], account["id"])
+        with patch("subscription.store.utcnow", return_value=NOW + timedelta(hours=1)):
+            with self.assertRaises(ValueError):
+                self.store.account_for_token(token)
         self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 3)
         self.assertEqual(self.delivery.enqueue_login("login@example.com", NOW), 1)
         self.assertEqual(self.delivery.run_once(NOW + timedelta(hours=2)), "skipped")

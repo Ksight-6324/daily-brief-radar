@@ -92,8 +92,9 @@ class Delivery:
             row = conn.execute("SELECT * FROM subscribers WHERE email=?", (email,)).fetchone()
             if row is None or row["status"] not in ("active", "expired") or not row["confirmed_at"] or row["suppressed_at"]:
                 return 0
-            body = "点击下面的链接进入你的个人主页，查看关注内容、调整板块或续费。如果不是你本人申请，请忽略此邮件。"
-            html, text = render_notice("进入你的简报主页", body, self.base_url, self.store.token(row), action="进入我的主页")
+            body = "点击下面的链接进入你的个人主页，查看关注内容、调整板块或续费。链接一小时内有效。如果不是你本人申请，请忽略此邮件。"
+            login_token = self.store.token(row, expires_at=now + timedelta(hours=1))
+            html, text = render_notice("进入你的简报主页", body, self.base_url, login_token, action="进入我的主页")
             payload = self.payload(row, "你的 Daily Brief Radar 登录链接", html, text)
             return self.enqueue(conn, row, "login_link", uuid4().hex, payload, now)
 
