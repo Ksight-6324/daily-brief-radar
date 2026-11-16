@@ -39,3 +39,17 @@
 ## 测试
 
 `python -m unittest discover -s tests` 包含对真实 Museletter 应用的集成测试，使用假的邮件服务商，不会真的发信。真实 SES 或 Cloudflare 发信、真实邮箱到达需要凭据后另行验收。
+
+## 配置 Amazon SES（上线前清单）
+
+这些步骤必须在你自己的 AWS 账号和域名后台完成。
+
+1. 先有发信域名，建议用子域名，例如 `mail.你的域名`。没有域名时，只能做本地预览。
+2. AWS 控制台打开 SES，选定区域（与 `AWS_REGION` 一致），创建并验证域名身份，按提示添加 DKIM 记录。SPF、DMARC 参考 `docs/email-domain-setup.md`。
+3. 新账号在沙盒中，只能发给已验证的邮箱。向 AWS 申请移出沙盒，说明用途是双重确认的订阅简报。
+4. 创建只授予发信权限的 IAM 用户，访问密钥填入 `.env` 的 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`。
+5. 退信和投诉要回传给引擎：创建 SES 配置集和 SNS 主题，把 `/webhooks/sns` 订阅到主题，对应填写 `MUSELETTER_SES_CONFIGURATION_SET`、`MUSELETTER_SNS_TOPIC_ARN`。这一步需要引擎有公网 HTTPS 地址。
+6. `.env` 里填 `MUSELETTER_FROM_EMAIL`（该域名下的地址）和 `MUSELETTER_POSTAL_ADDRESS`（真实邮寄地址），公开部署时把 `MUSELETTER_BASE_URL` 改成 HTTPS 域名。
+7. 运行 `museletter doctor`，全部通过后再做测试发送。
+
+本机已生成 `.env`，其中 `MUSELETTER_API_KEY` 为随机值，发件地址暂为占位的 `brief@example.com`，只用于本地预览。
