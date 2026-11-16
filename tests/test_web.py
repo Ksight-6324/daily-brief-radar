@@ -107,6 +107,24 @@ class WebTest(StoreCase):
         self.assertEqual(self.client.post("/api/unsubscribe", params={"token": account["manage_token"]}).status_code, 200)
         self.assertEqual(self.store.subscriber(account["id"])["status"], "unsubscribed")
 
+    def test_login_mail_unsubscribe_header_cannot_be_used_to_access_or_delete_the_account(self):
+        import re
+        from datetime import timedelta
+        from unittest.mock import patch
+        delivery = Delivery(self.store, "https://brief.example.com", "Brief <brief@example.com>")
+        account = self.subscriber("header-scope@example.invalid")
+        delivery.enqueue_login("header-scope@example.invalid", NOW)
+        with self.store.connect() as conn:
+            payload = json.loads(conn.execute("SELECT payload FROM delivery_log WHERE task_type='login_link'").fetchone()[0])
+        token = re.search(r"token=([^>]+)", payload["headers"]["List-Unsubscribe"]).group(1)
+        headers = {"Authorization": "Bearer " + token}
+        with patch("subscription.store.utcnow", return_value=NOW + timedelta(days=365)):
+            self.assertEqual(self.client.get("/api/account", headers=headers).status_code, 401)
+            self.assertEqual(self.client.post("/api/account/delete", headers=headers,
+                json={"confirm_email": "header-scope@example.invalid"}).status_code, 401)
+            self.assertEqual(self.client.post("/api/unsubscribe", params={"token": token}).status_code, 200)
+        self.assertEqual(self.store.subscriber(account["id"])["status"], "unsubscribed")
+
     def test_account_and_payment_routes_require_authentication(self):
         self.assertEqual(self.client.get("/api/account").status_code, 401)
         self.assertEqual(self.client.get("/api/account", headers={"Authorization": "Bearer invalid"}).status_code, 401)

@@ -57,7 +57,7 @@ class Delivery:
         self.client = client or ResendClient()
 
     def payload(self, row, subject, html, text):
-        token = self.store.token(row)
+        token = self.store.token(row, purpose="unsubscribe")
         return {"from": self.sender, "to": [row["email"]], "subject": subject, "html": html, "text": text,
                 "headers": {"List-Unsubscribe": f"<{self.base_url}/api/unsubscribe?token={token}>",
                             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}}

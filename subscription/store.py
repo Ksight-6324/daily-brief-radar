@@ -218,7 +218,11 @@ class Store:
 
     def unsubscribe(self, token, now=None):
         with self.transaction() as conn:
-            row = self.account_for_token(token, conn=conn)
+            try:
+                row = self.account_for_token(token, purpose="unsubscribe", conn=conn)
+            except ValueError:
+                # Existing email links and the authenticated management page use manage tokens.
+                row = self.account_for_token(token, conn=conn)
             now = now or utcnow()
             conn.execute("""UPDATE subscribers SET status='unsubscribed', unsubscribed_at=?,
                             confirmation_expires_at=? WHERE id=?""",
