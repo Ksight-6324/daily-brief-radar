@@ -13,6 +13,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .delivery import Delivery
+from .dnscheck import check_domain, domain_of
+from .maintenance import health, prune_backups, prune_logs
 from .pipeline import freeze_markdown, generate_markdown
 from .store import BEIJING, EDITIONS, Store, edition_for, utcnow
 
@@ -28,6 +30,14 @@ def main():
     erase.add_argument("email")
     backup = commands.add_parser("backup")
     backup.add_argument("--to", default="backups")
+    backup.add_argument("--keep-days", type=int, default=30, help="delete older backups after a new one succeeds, 0 keeps all")
+    prune = commands.add_parser("prune")
+    prune.add_argument("--days", type=int, default=30)
+    commands.add_parser("check")
+    dns = commands.add_parser("check-dns")
+    dns.add_argument("domain", nargs="?")
+    dns.add_argument("--selector", default="resend")
+    dns.add_argument("--send-label", default="send")
     commands.add_parser("scan")
     commands.add_parser("publish")
     commands.add_parser("generate")
@@ -115,7 +125,22 @@ def main():
         for saved in (destination, destination.with_suffix(".db.key")):
             if saved.exists():
                 os.chmod(saved, 0o600)
-        print(json.dumps({"backup": str(destination)}))
+        removed = prune_backups(target, args.keep_days, now)
+        print(json.dumps({"backup": str(destination), "removed": removed}))
+    elif args.command == "prune":
+        print(json.dumps(prune_logs(store, args.days, now)))
+    elif args.command == "check":
+        problems = health(store, now)
+        print(json.dumps({"ok": not any(level == "error" for level, _ in problems),
+                          "problems": [{"level": level, "message": message} for level, message in problems]}, ensure_ascii=False))
+        if any(level == "error" for level, _ in problems):
+            raise SystemExit(1)
+    elif args.command == "check-dns":
+        domain = args.domain or domain_of(os.environ.get("RESEND_FROM", ""))
+        checks = check_domain(domain, selector=args.selector, send_label=args.send_label)
+        print(json.dumps({"domain": domain, "checks": checks}, ensure_ascii=False, indent=1))
+        if any(check["status"] == "fail" for check in checks):
+            raise SystemExit(1)
     elif args.command == "status":
         with store.connect() as conn:
             statuses = {row["status"]: row["count"] for row in conn.execute("SELECT status,count(*) AS count FROM delivery_log GROUP BY status")}
