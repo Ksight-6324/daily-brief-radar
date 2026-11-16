@@ -1,0 +1,49 @@
+# Local engine + content scheduler. Start with docker compose -f compose.museletter.yml up -d --build
+x-light-app: &light-app
+  build:
+    context: .
+    args:
+      REQUIREMENTS_FILE: requirements-museletter.txt
+  image: daily-brief-radar:museletter
+  env_file: .env
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  museletter:
+    <<: *light-app
+    command: ["python", "-m", "uvicorn", "museletter.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    environment:
+      MUSELETTER_DB_PATH: /data/museletter.db
+      MUSELETTER_OPT_IN: double
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - museletter-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  publisher:
+    <<: *light-app
+    command: ["python", "-m", "newsletter", "schedule", "--watch"]
+    environment:
+      BRIEF_MODE: museletter
+      MUSELETTER_URL: http://museletter:8000
+      BRIEF_PUBLISH_DB_PATH: /data/publisher.db
+      BRIEF_SEEN_FILE: /data/seen_items.json
+    volumes:
+      - publisher-data:/data
+    depends_on:
+      museletter:
+        condition: service_healthy
+
+volumes:
+  museletter-data:
+  publisher-data:

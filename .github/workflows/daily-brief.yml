@@ -38,6 +38,7 @@ jobs:
 
       - name: 运行简报
         env:
+          BRIEF_MODE: personal
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
           QQ_AUTH_CODE: ${{ secrets.QQ_AUTH_CODE }}

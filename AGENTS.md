@@ -12,6 +12,10 @@
 - `docs/subscription-operations.md` 保存账号配置、API／worker／scheduler 启动方式、人工验收和当前交付边界。
 - 现有个人版继续通过原有入口运行。订阅模式通过 `BRIEF_MODE=subscription` 启用，连接 `BRIEF_DB_PATH` 指定的持久数据库。
 
+## 运行模式
+
+- 默认 `BRIEF_MODE=museletter`：内容由本仓库生成，订阅者、确认、退订、抑制与发送账本由 Museletter 管理，见 `docs/museletter.md`。`subscription` 为原付费系统，`personal` 为个人版。
+
 ## 硬性规则
 
 - 一次推进一个目标，修改前说明计划，仅修改当前目标所需文件。本任务明确授权新增 schema 和相关配置。

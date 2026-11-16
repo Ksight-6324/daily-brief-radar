@@ -7,6 +7,8 @@ on:
       - 'web/**'
       - 'tests/**'
       - 'run_all.py'
+      - 'newsletter.py'
+      - 'compose.museletter.yml'
       - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
       - 'Dockerfile'
@@ -20,6 +22,8 @@ on:
       - 'web/**'
       - 'tests/**'
       - 'run_all.py'
+      - 'newsletter.py'
+      - 'compose.museletter.yml'
       - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
       - 'Dockerfile'
@@ -46,6 +50,7 @@ jobs:
           cp .env.example .env
           export DOMAIN=brief.example.com
           docker compose config --format json > /tmp/brief-compose.json
+          docker compose -f compose.museletter.yml config --format json > /tmp/museletter-compose.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -58,6 +63,11 @@ jobs:
           assert services['api']['environment']['FORWARDED_ALLOW_IPS'] == '*'
           assert not services['api'].get('ports')
           assert '--ping' in services['worker']['healthcheck']['test']
+          light = json.loads(Path('/tmp/museletter-compose.json').read_text())['services']
+          assert set(light) == {'museletter', 'publisher'}
+          assert light['museletter']['ports'][0]['host_ip'] == '127.0.0.1'
+          assert '--no-access-log' in light['museletter']['command']
+          assert light['publisher']['environment']['BRIEF_MODE'] == 'museletter'
           PY
           docker run --rm -e DOMAIN=brief.example.com \
             -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \

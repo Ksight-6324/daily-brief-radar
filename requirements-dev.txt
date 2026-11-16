@@ -1,2 +1,2 @@
--r requirements.txt
+-r requirements-museletter.txt
 httpx>=0.27,<1

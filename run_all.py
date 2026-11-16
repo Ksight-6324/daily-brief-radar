@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path.cwd() / ".env")
 
+MODE = os.environ.get("BRIEF_MODE", "museletter")
+if MODE not in ("museletter", "subscription", "personal"):
+    raise ValueError("BRIEF_MODE 必须为 museletter、subscription 或 personal")
+
 # 每一步最多重试几次、每次重试前等多久（秒）
 MAX_RETRIES = 3
 RETRY_WAIT_SECONDS = 60
@@ -32,7 +36,22 @@ steps = FETCH_STEPS + [
     ("发送简报邮件", "core/send_email.py"),
 ]
 
-if os.environ.get("BRIEF_MODE") == "subscription":
+if MODE == "museletter":
+    from newsletter import Publisher
+    from subscription.store import EDITIONS, edition_for, utcnow
+
+    now = utcnow()
+    edition = os.environ.get("BRIEF_EDITION") or edition_for(now)
+    if edition not in EDITIONS:
+        raise ValueError("BRIEF_EDITION 必须为 morning 或 evening")
+    os.environ["BRIEF_EDITION"] = edition
+    frozen = Publisher().current(now, edition)
+    steps = [] if frozen else [
+        ("抓取简报主题新闻", "fetchers/fetch_category_news.py"),
+        ("生成并冻结本期内容", "-m", "newsletter", "generate"),
+    ]
+    steps.append(("通过 Museletter 发布本期简报", "-m", "newsletter", "publish"))
+elif MODE == "subscription":
     from subscription.store import BEIJING, EDITIONS, Store, edition_for, utcnow
 
     now = utcnow()
@@ -73,7 +92,7 @@ for step in steps:
         break
 
 if all_ok:
-    print("\n✅ 简报任务已完成" if os.environ.get("BRIEF_MODE") == "subscription" else "\n✅ 全部完成！简报已生成并发送")
+    print("\n✅ 简报任务已完成" if MODE in ("subscription", "museletter") else "\n✅ 全部完成！简报已生成并发送")
 else:
       sys.exit(1)
 

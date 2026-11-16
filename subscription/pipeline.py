@@ -6,7 +6,7 @@ from pathlib import Path
 from .store import BEIJING, EDITIONS, SECTIONS, edition_for, utcnow
 
 
-def freeze_markdown(store, content, now=None, edition=None):
+def parse_markdown(content, now=None, edition=None):
     now = now or utcnow()
     sections = {}
     current = None
@@ -33,6 +33,15 @@ def freeze_markdown(store, content, now=None, edition=None):
         cards = [line.strip() for candidate in candidates for line in sections.get(candidate, []) if "|||" in line]
         if cards:
             snapshot[key] = cards[0]
+    if edition not in EDITIONS:
+        raise ValueError("请选择早报或晚报版次")
+    if not snapshot:
+        raise ValueError("本期没有有效内容，停止发布")
+    return issue_date, edition, snapshot
+
+
+def freeze_markdown(store, content, now=None, edition=None):
+    issue_date, edition, snapshot = parse_markdown(content, now, edition)
     return store.freeze_issue(issue_date, snapshot, now, edition=edition)
 
 

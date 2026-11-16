@@ -229,3 +229,21 @@
 - 文档：`docs/deployment.md`（守护、监控、升级、数据与日志保存规范、上线检查清单）、`docs/email-domain-setup.md`。AGENTS.md 增加日志不得出现邮箱、令牌、正文的规则，已逐条核对现有输出。
 - 验证：新增 14 项测试（备份轮换、日志清理、健康检查、备份时效、DNS 判断与 DoH 解析），并对真实公共 DNS 做过一次查询。`bash -n` 检查安装脚本，YAML 解析 compose，检查单元文件结构。
 - 未验证：Docker 与 systemd 在本机不可用，compose、Caddyfile、systemd 单元和安装脚本没有在真实服务器上运行过。Resend 的实际 DNS 记录、Gmail 的 PASS 结果需要在你的域名上实测。
+
+
+### Museletter 轻量引擎改造计划（2026 年 11 月 16 日）
+
+用户指定采用 Museletter，内容生成继续沿用 Python。实施使用 writing-plans、test-driven-development 和 verification-before-completion 技能，直接在 my-fork 完成。
+
+方案采用独立 BRIEF_MODE=museletter，经已核实的 Museletter 1.5.0 管理 API 发布共享早晚报。订阅、确认、退订、抑制与投递账本由引擎管理。本地 publisher SQLite 仅保存期号、冻结正文、目标列表／标签和 campaign ID。原付费系统的数据与迁移逻辑继续供历史入口使用。轻量模式的共享正文按列表／标签分发，逐人偏好和付款权益需另行接入。
+
+- [x] 新增 newsletter.py，复用主题摘要、结构化内容解析及安全卡片渲染。覆盖日期、早晚版次、空内容、冻结、超时、并发与错误输出。
+- [x] 接入 run_all.py 与北京时间常驻调度，07:30／19:30 冻结，08:00／20:00 发布，重试使用冻结内容和固定幂等键。
+- [x] 增加固定版本依赖、双服务轻量 Compose、环境示例及本地／公网端点操作文档，更新项目约束与入口说明。
+- [x] 运行全套 unittest、真实 Museletter API 的本地假邮件服务商联调及 git diff --check，记录边界并提交。
+
+默认开启双重确认、关闭阅读跟踪，保留引擎的测试发送前置检查。管理员手工测试 campaign 后可发布，持续自动发送需要显式配置 MUSELETTER_SKIP_TEST=true。管理 API 使用私网或 localhost，公开确认与退订依赖稳定 HTTPS 地址。
+
+核实来源为 PyPI museletter 1.5.0 发布包及包内 api/admin.py、app.py、sender.py。创建接口为 POST /v1/lists/{ref}/campaigns，发送接口为 POST /v1/campaigns/{id}/send。上游在投递端使用 at-least-once，不能保证供应商已接受但账本未提交的崩溃窗口中绝无重复。
+
+- 完成记录：126 项测试通过，其中集成测试直接使用真实 Museletter 1.5.0 应用与假邮件服务商。操作文档见 `docs/museletter.md`。
