@@ -24,3 +24,8 @@
 		}
 	}
 }
+
+# Visitors who type www land on the main domain. Requires a www DNS record pointing to the same server.
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
