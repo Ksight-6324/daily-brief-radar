@@ -808,6 +808,79 @@ input[type="checkbox"]:checked {
   margin-top: 16px;
 }
 
+.site-footer a {
+  color: var(--paper);
+  font-weight: 800;
+}
+.policy {
+  max-width: 760px;
+  margin: 56px auto 90px;
+}
+.policy h1 {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -1.5px;
+  margin: 14px 0 12px;
+}
+.policy-meta {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.policy h2 {
+  font-size: 22px;
+  font-weight: 900;
+  margin: 40px 0 12px;
+  padding-top: 12px;
+  border-top: 4px solid var(--ink);
+}
+.policy ul {
+  padding-left: 22px;
+}
+.policy li {
+  margin-bottom: 8px;
+}
+.policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--white);
+  border: 3px solid var(--ink);
+  margin: 16px 0;
+  font-size: 15px;
+}
+.policy-table th,
+.policy-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--ink);
+}
+.policy-table th {
+  background: var(--yellow);
+  font-weight: 900;
+}
+.policy-table td:first-child {
+  width: 46%;
+  font-weight: 700;
+}
+@media (max-width: 720px) {
+  .policy {
+    margin: 40px auto 64px;
+  }
+  .policy h1 {
+    font-size: 32px;
+  }
+  .policy-table th,
+  .policy-table td {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  .policy-table td:first-child {
+    width: 42%;
+  }
+}
+
 @media (min-width: 1600px) {
   .site-shell {
     max-width: 1320px;

@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl
@@ -87,6 +88,14 @@ def create_app(store=None, delivery=None, payment=None):
             conn.execute("SELECT 1")
         return {"status": "ok"}
 
+    def contact():
+        # Shown on the privacy policy. An unusable address is dropped instead of being published.
+        try:
+            email = normalize_email(os.environ.get("CONTACT_EMAIL", ""))
+        except ValueError:
+            email = ""
+        return {"email": email, "operator": os.environ.get("OPERATOR_NAME", "").strip()[:80]}
+
     @app.get("/api/options")
     def options():
         return {
@@ -94,6 +103,7 @@ def create_app(store=None, delivery=None, payment=None):
             "plans": [{"id": key, "label": PLAN_LABELS[key], "amount": amount, "days": days}
                       for key, (amount, days) in PLANS.items()],
             "schedule": {"timezone": "Asia/Shanghai", "times": ["08:00", "20:00"]},
+            "contact": contact(),
         }
 
     @app.post("/api/subscribe")
@@ -236,6 +246,10 @@ def create_app(store=None, delivery=None, payment=None):
         except (ValueError, UnicodeError):
             return PlainTextResponse("failure", status_code=400)
         return "success"
+
+    @app.get("/privacy")
+    def privacy():
+        return FileResponse(STATIC / "privacy.html")
 
     @app.get("/")
     @app.get("/confirm")

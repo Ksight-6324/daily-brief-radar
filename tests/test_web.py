@@ -91,7 +91,7 @@ class WebTest(StoreCase):
         self.assertEqual(response.status_code, 400)
 
     def test_pages_include_security_headers_and_real_forms(self):
-        for route in ("/", "/confirm", "/manage", "/unsubscribe", "/login"):
+        for route in ("/", "/confirm", "/manage", "/unsubscribe", "/login", "/delete", "/privacy"):
             with self.subTest(route=route):
                 response = self.client.get(route)
                 self.assertEqual(response.status_code, 200)
@@ -192,3 +192,18 @@ class WebTest(StoreCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("支付订单", response.json()["detail"])
         self.assertIsNotNone(self.store.subscriber(account["id"]))
+
+    def test_privacy_policy_describes_the_data_the_system_really_keeps(self):
+        page = self.client.get("/privacy").text
+        for fact in ("邮箱地址", "Resend", "支付宝", "删除账号", "不使用 Cookie", "30 天", "无法还原为邮箱"):
+            self.assertIn(fact, page)
+        self.assertNotIn("<script>", page.replace('<script src="/static/privacy.js" defer></script>', ""))
+        home = self.client.get("/").text
+        self.assertEqual(home.count('href="/privacy"'), 2)
+
+    def test_contact_details_come_from_configuration_and_bad_addresses_are_dropped(self):
+        from unittest.mock import patch
+        with patch.dict("os.environ", {"CONTACT_EMAIL": "Privacy@Example.com", "OPERATOR_NAME": " 示例工作室 "}):
+            self.assertEqual(self.client.get("/api/options").json()["contact"], {"email": "privacy@example.com", "operator": "示例工作室"})
+        with patch.dict("os.environ", {"CONTACT_EMAIL": "javascript:alert(1)", "OPERATOR_NAME": ""}):
+            self.assertEqual(self.client.get("/api/options").json()["contact"], {"email": "", "operator": ""})
