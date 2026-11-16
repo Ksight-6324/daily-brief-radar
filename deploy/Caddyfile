@@ -10,7 +10,7 @@
 		output file /var/log/caddy/access.log {
 			roll_size 10mb
 			roll_keep 5
-			roll_keep_days 14
+			roll_keep_for 336h
 		}
 		format filter {
 			wrap json

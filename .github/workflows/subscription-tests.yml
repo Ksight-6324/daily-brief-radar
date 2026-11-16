@@ -9,6 +9,10 @@ on:
       - 'run_all.py'
       - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'deploy/**'
       - '.github/workflows/subscription-tests.yml'
   pull_request:
     paths:
@@ -18,6 +22,10 @@ on:
       - 'run_all.py'
       - 'fetchers/fetch_category_news.py'
       - 'requirements*.txt'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'deploy/**'
       - '.github/workflows/subscription-tests.yml'
 
 permissions:
@@ -33,3 +41,10 @@ jobs:
           python-version: '3.11'
       - run: pip install -r requirements-dev.txt
       - run: python -m unittest discover -v
+      - name: Validate deployment configuration
+        run: |
+          cp .env.example .env
+          DOMAIN=brief.example.com docker compose config --quiet
+          docker run --rm -e DOMAIN=brief.example.com \
+            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2 adapt --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null

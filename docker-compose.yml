@@ -6,6 +6,11 @@ x-app: &app
   build: .
   image: daily-brief-radar:latest
   env_file: .env
+  environment:
+    BRIEF_MODE: subscription
+    BRIEF_DB_PATH: /data/brief.db
+    BRIEF_SEEN_FILE: /data/seen_items.json
+    BRIEF_BACKUP_DIR: /backups
   restart: unless-stopped
   volumes:
     - brief-data:/data
