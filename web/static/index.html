@@ -7,7 +7,7 @@
       name="description"
       content="北京时间每天早八点、晚八点各一封文字简报。15 个主题自由选择，周付 3 元，主动确认订阅，随时退订。"
     />
-    <meta name="theme-color" content="#f4f1e8" />
+    <meta name="theme-color" content="#f5f4ef" />
     <title>Daily Brief Radar · 把今天的世界补全</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="stylesheet" href="/static/style.css" />
@@ -56,28 +56,24 @@
             </div>
 
             <div class="hero-stage" aria-hidden="true">
-              <span class="px p-circle"><span class="shape"></span></span>
-              <span class="px p-tri"><span class="shape"></span></span>
-              <span class="px p-half"><span class="shape"></span></span>
-              <span class="px p-square"><span class="shape"></span></span>
-              <span class="px p-bar"><span class="shape"></span></span>
-              <div class="px hero-mail">
-                <div class="hm-bar"><i></i><i></i><i></i><span>08:00 · 早报</span></div>
-                <div class="hm-body">
-                  <strong>今日三条必知</strong>
-                  <div class="hm-row"><b></b><span></span></div>
-                  <div class="hm-row"><b></b><span></span></div>
-                  <div class="hm-row"><b></b><span></span></div>
-                  <em>三分钟读完</em>
+              <div class="ink-rings"><i></i><i></i><i></i><i></i></div>
+              <article class="live-mail">
+                <header class="lm-bar">
+                  <span>DAILY BRIEF RADAR</span><span class="lm-edition">08:00 早报</span>
+                </header>
+                <div class="lm-body">
+                  <p class="lm-topic"><span class="fly">股票经济</span></p>
+                  <h3 class="lm-title"><span class="fly">利率按兵不动，市场在读措辞</span></h3>
+                  <p class="lm-sub"><span class="fly">声明对通胀的措辞微调，年内降息节奏被重新评估。</span></p>
+                  <p class="lm-sum">
+                    <span class="fly">利率预期会传导到房贷、理财收益和企业融资成本，值得留意下一次数据公布。</span>
+                  </p>
                 </div>
-              </div>
-              <div class="px p-timer">
-                <svg viewBox="0 0 64 64" focusable="false">
-                  <circle class="t-track" cx="32" cy="32" r="26"></circle>
-                  <circle class="t-run" cx="32" cy="32" r="26"></circle>
-                </svg>
-                <b>3<small>MIN</small></b>
-              </div>
+                <footer class="lm-foot">
+                  <span class="lm-count">01 / 06</span><span class="lm-progress"><i></i></span><span>三分钟读完</span>
+                </footer>
+              </article>
+              <p class="stage-caption">示例 · 每一条：主标题、副标题、梗概</p>
             </div>
           </section>
 
@@ -155,6 +151,52 @@
                 <h3>有来源，可退订</h3>
                 <p>每条附原始来源，AI 辅助摘要请以原文为准。你主动确认才开始，随时可以退订。</p>
               </article>
+            </div>
+          </section>
+
+          <section class="unfold" aria-labelledby="unfold-heading">
+            <div class="unfold-sticky">
+              <div class="unfold-copy">
+                <span class="eyebrow">SCROLL TO READ</span>
+                <h2 id="unfold-heading">往下滚动，<br />看一封简报如何展开。</h2>
+                <ol class="unfold-steps">
+                  <li>刊头：日期与版次</li>
+                  <li>主标题：发生了什么</li>
+                  <li>副标题：一句话说清</li>
+                  <li>梗概：为什么和你有关</li>
+                  <li>一个观察点</li>
+                </ol>
+                <p class="unfold-clock"><span id="unfold-time">0:00</span><small>/ 3:00 阅读</small></p>
+              </div>
+              <div class="unfold-mail">
+                <p class="u-mast u-piece" data-step="0">DAILY BRIEF RADAR · 示例 · 早报</p>
+                <h3 class="u-head u-piece" data-step="0">今日三条必知</h3>
+                <article class="u-story">
+                  <span class="u-label u-piece" data-step="1">01 · 股票经济</span>
+                  <h4 class="u-title u-piece from-left" data-step="1">利率按兵不动，市场在读措辞</h4>
+                  <p class="u-sub u-piece from-right" data-step="2">声明对通胀的措辞微调，年内降息节奏被重新评估。</p>
+                  <p class="u-sum u-piece from-below" data-step="3">
+                    利率预期会传导到房贷、理财收益和企业融资成本，值得留意下一次数据公布。
+                  </p>
+                </article>
+                <article class="u-story">
+                  <span class="u-label u-piece" data-step="1">02 · 人工智能</span>
+                  <h4 class="u-title u-piece from-left" data-step="1">新模型发布，先看实际能做什么</h4>
+                  <p class="u-sub u-piece from-right" data-step="2">官方强调长文本与工具调用，第三方评测尚未全部公开。</p>
+                  <p class="u-sum u-piece from-below" data-step="3">
+                    分清已发布的功能和待验证的说法，才知道哪些真的会影响你的工作。
+                  </p>
+                </article>
+                <article class="u-story">
+                  <span class="u-label u-piece" data-step="1">03 · 就业机会</span>
+                  <h4 class="u-title u-piece from-left" data-step="1">招聘旺季，哪些岗位在回暖</h4>
+                  <p class="u-sub u-piece from-right" data-step="2">部分技术类岗位需求回升，传统行业岗位保持平稳。</p>
+                  <p class="u-sum u-piece from-below" data-step="3">了解市场冷热，有助于判断求职或转岗的时机。</p>
+                </article>
+                <p class="u-observe u-piece" data-step="4">
+                  <strong>一个观察点</strong>本周晚些时候公布的数据，可能改变市场对利率的预期。
+                </p>
+              </div>
             </div>
           </section>
 

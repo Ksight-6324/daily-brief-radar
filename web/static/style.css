@@ -1,14 +1,21 @@
-/* Minimal Bauhaus: primary colours, flat blocks, thick rules, geometric marks, one sans-serif family. */
+/* Ink and paper: black, white and ink washes only, hairline rules, serif headlines over a quiet sans body.
+   The old accent names are kept as tokens so every page follows the same monochrome palette. */
 :root {
-  --paper: #f4f1e8;
-  --white: #fff;
+  --paper: #f5f4ef;
+  --white: #fcfcfa;
   --ink: #111;
-  --red: #d8342b;
-  --blue: #1d4e9e;
-  --yellow: #f7b500;
-  --muted: #4f4f4f;
-  --sans: "Futura", "Century Gothic", "Avenir Next", "Helvetica Neue", Arial,
-    "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --ink-2: #3a3a3a;
+  --wash: #e6e4dd;
+  --wash-2: #d6d3ca;
+  --rule: rgba(17, 17, 17, 0.16);
+  --red: var(--ink);
+  --blue: var(--ink);
+  --yellow: var(--wash);
+  --danger: #8f1d1d;
+  --muted: #5f5f5f;
+  --sans: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --serif: Georgia, "Times New Roman", "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, SimSun, serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 * {
   box-sizing: border-box;
@@ -18,6 +25,7 @@ html {
   scroll-padding-top: 24px;
 }
 body {
+  overflow-x: clip;
   margin: 0;
   background: var(--paper);
   color: var(--ink);
@@ -60,12 +68,23 @@ h4,
 p {
   margin-top: 0;
 }
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--serif);
+  font-weight: 700;
+}
+::selection {
+  background: var(--ink);
+  color: var(--white);
+}
 .skip-link {
   position: absolute;
   top: -80px;
   left: 20px;
   background: var(--yellow);
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   padding: 8px 16px;
   z-index: 5;
 }
@@ -94,52 +113,87 @@ p {
   justify-content: space-between;
   gap: 24px;
   padding: 24px 0 20px;
-  border-bottom: 4px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 .wordmark {
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 3px;
   text-decoration: none;
   white-space: nowrap;
 }
+/* Radar mark: an ink ring, a centre dot and a slow sweep. */
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.brand-mark i {
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-.brand-mark i:nth-child(1) {
-  background: var(--red);
+  position: relative;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--ink);
   border-radius: 50%;
 }
+.brand-mark i {
+  position: absolute;
+  display: block;
+}
+.brand-mark i:nth-child(1) {
+  inset: 5px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  opacity: 0.45;
+}
 .brand-mark i:nth-child(2) {
-  background: var(--blue);
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--ink);
+  border-radius: 50%;
 }
 .brand-mark i:nth-child(3) {
-  background: var(--yellow);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  left: 50%;
+  top: 50%;
+  width: 50%;
+  height: 1px;
+  background: var(--ink);
+  transform-origin: 0 50%;
+  animation: radar-sweep 6s linear infinite;
+}
+@keyframes radar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
 }
 nav {
   display: flex;
   gap: 32px;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
 }
 nav a {
+  position: relative;
   text-decoration: none;
-  border-bottom: 3px solid transparent;
-  padding-bottom: 2px;
+  padding-bottom: 4px;
 }
-nav a:hover {
-  border-bottom-color: var(--red);
+nav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s var(--ease);
+}
+nav a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 /* Story labels, used by the reader's feed */
@@ -148,7 +202,7 @@ nav a:hover {
   background: var(--ink);
   color: var(--paper);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 1px;
   line-height: 1.5;
   padding: 3px 8px;
@@ -161,13 +215,13 @@ nav a:hover {
 
 /* Forms */
 .subscribe-section {
-  border-top: 4px solid var(--ink);
+  border-top: 1px solid var(--ink);
   padding: 52px 0 40px;
 }
 .subscribe-section h2,
 .section-heading h2 {
   font-size: 42px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.25;
   letter-spacing: -1px;
   margin: 0 0 12px;
@@ -179,7 +233,7 @@ nav a:hover {
 .field-label {
   display: block;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
@@ -189,7 +243,7 @@ nav a:hover {
 input[type="email"] {
   width: 100%;
   height: 54px;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 0;
   background: var(--white);
   padding: 10px 14px;
@@ -206,7 +260,7 @@ fieldset {
 legend {
   padding: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 1px;
   margin-bottom: 10px;
 }
@@ -215,7 +269,7 @@ legend {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px;
   background: var(--ink);
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
 }
 .preference-options label {
   display: flex;
@@ -242,7 +296,7 @@ input[type="checkbox"] {
   width: 20px;
   height: 20px;
   margin: 0;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 0;
   background: var(--white);
 }
@@ -268,7 +322,7 @@ input[type="checkbox"]:checked {
   background: transparent;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
@@ -312,7 +366,7 @@ input[type="checkbox"]:checked {
   margin: 0;
 }
 .feedback.error {
-  color: var(--red);
+  color: var(--danger);
 }
 
 /* Buttons */
@@ -323,56 +377,58 @@ input[type="checkbox"]:checked {
   gap: 16px;
   min-height: 52px;
   padding: 12px 24px;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 0;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  letter-spacing: 2px;
   text-decoration: none;
   transition:
-    background 0.12s,
-    color 0.12s;
+    background 0.3s var(--ease),
+    color 0.3s var(--ease);
 }
 .primary {
   background: var(--ink);
-  color: var(--paper);
+  color: var(--white);
   width: 100%;
 }
 .primary:hover {
-  background: var(--red);
-  border-color: var(--ink);
+  background: var(--white);
+  color: var(--ink);
 }
 .compact {
   width: auto;
   min-width: 150px;
 }
 .hero-action {
-  background: var(--red);
+  background: var(--ink);
   color: var(--white);
   width: auto;
 }
 .hero-action:hover {
-  background: var(--ink);
-}
-.secondary {
   background: var(--white);
   color: var(--ink);
 }
+.secondary {
+  background: transparent;
+  color: var(--ink);
+}
 .secondary:hover {
-  background: var(--yellow);
+  background: var(--ink);
+  color: var(--white);
 }
 .danger {
   background: var(--white);
-  color: var(--red);
-  border-color: var(--red);
+  color: var(--danger);
+  border-color: var(--danger);
 }
 .danger:hover {
-  background: var(--red);
+  background: var(--danger);
   color: var(--white);
 }
 
 /* Plans */
 .plans-section {
-  border-top: 4px solid var(--ink);
+  border-top: 1px solid var(--ink);
   padding: 52px 0 64px;
 }
 .section-heading {
@@ -392,13 +448,13 @@ input[type="checkbox"]:checked {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   background: var(--white);
 }
 .plan {
   position: relative;
   padding: 36px 24px 18px;
-  border-right: 3px solid var(--ink);
+  border-right: 1px solid var(--ink);
 }
 .plan:last-child {
   border-right: 0;
@@ -407,7 +463,7 @@ input[type="checkbox"]:checked {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 14px;
+  height: 2px;
   background: var(--red);
 }
 .plan:nth-child(2)::before {
@@ -421,15 +477,16 @@ input[type="checkbox"]:checked {
 }
 .plan h3 {
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.3;
   margin-bottom: 4px;
 }
 .price {
+  font-family: var(--serif);
   font-size: 64px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -3px;
+  letter-spacing: -2px;
   margin: 0 0 8px;
 }
 .plan > p:not(.price) {
@@ -444,10 +501,10 @@ input[type="checkbox"]:checked {
   padding: 12px 0 0;
   background: transparent;
   border: 0;
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--ink);
   color: var(--ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   text-align: left;
 }
 .text-button:hover {
@@ -467,7 +524,7 @@ input[type="checkbox"]:checked {
   font-size: 12px;
 }
 .site-footer span {
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 3px;
 }
 .site-footer p {
@@ -481,7 +538,7 @@ input[type="checkbox"]:checked {
 }
 .account-panel h1 {
   font-size: 42px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.25;
   letter-spacing: -1.5px;
   margin: 14px 0 20px;
@@ -498,9 +555,9 @@ input[type="checkbox"]:checked {
 .panel-context {
   display: inline-block;
   background: var(--yellow);
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 2px;
   line-height: 1.4;
   padding: 2px 10px;
@@ -512,21 +569,21 @@ input[type="checkbox"]:checked {
 }
 .account-summary {
   background: var(--white);
-  border: 3px solid var(--ink);
-  border-left: 14px solid var(--blue);
+  border: 1px solid var(--ink);
+  border-left: 3px solid var(--ink);
   padding: 18px 22px;
   margin: 24px 0 36px;
   font-weight: 700;
 }
 .renewal-options {
-  border-top: 4px solid var(--ink);
+  border-top: 1px solid var(--ink);
   margin-top: 36px;
   padding-top: 26px;
 }
 .renewal-options h2,
 #payment-panel h2 {
   font-size: 26px;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 8px;
 }
 .renewal-options p {
@@ -542,7 +599,7 @@ input[type="checkbox"]:checked {
   margin-top: 32px;
   background: var(--white);
   padding: 28px;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   box-shadow: 10px 10px 0 var(--yellow);
 }
 #payment-qr {
@@ -584,18 +641,18 @@ input[type="checkbox"]:checked {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  border-bottom: 4px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
   padding-bottom: 12px;
   margin-bottom: 16px;
 }
 .feed-head h2 {
   font-size: 28px;
-  font-weight: 900;
+  font-weight: 700;
   margin: 0;
 }
 .feed-tabs {
   display: flex;
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
 }
 .feed-tabs button {
   min-height: 42px;
@@ -604,10 +661,10 @@ input[type="checkbox"]:checked {
   background: var(--white);
   color: var(--ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .feed-tabs button + button {
-  border-left: 3px solid var(--ink);
+  border-left: 1px solid var(--ink);
 }
 .feed-tabs button[aria-pressed="true"] {
   background: var(--ink);
@@ -615,8 +672,8 @@ input[type="checkbox"]:checked {
 }
 .feed-note {
   background: var(--white);
-  border: 3px solid var(--ink);
-  border-left: 14px solid var(--red);
+  border: 1px solid var(--ink);
+  border-left: 3px solid var(--ink);
   padding: 12px 16px;
   font-size: 14px;
   font-weight: 700;
@@ -627,19 +684,19 @@ input[type="checkbox"]:checked {
   background: var(--ink);
   color: var(--paper);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 1.5px;
   padding: 2px 12px;
   margin: 28px 0 12px;
 }
 .story {
   background: var(--white);
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   padding: 20px 24px;
   margin-bottom: 12px;
 }
 .story.followed {
-  border-left: 14px solid var(--blue);
+  border-left: 3px solid var(--ink);
 }
 .story.followed .topic-label {
   background: var(--blue);
@@ -647,7 +704,7 @@ input[type="checkbox"]:checked {
 }
 .story h4 {
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.5;
   margin: 0 0 8px;
 }
@@ -660,17 +717,17 @@ input[type="checkbox"]:checked {
 }
 .story a {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--blue);
 }
 .home-panel #preferences-form {
-  border-top: 4px solid var(--ink);
+  border-top: 1px solid var(--ink);
   padding-top: 8px;
 }
 
 .delete-details h2 {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   margin: 24px 0 8px;
 }
 .delete-details ul {
@@ -686,7 +743,7 @@ input[type="checkbox"]:checked {
 
 .site-footer a {
   color: var(--paper);
-  font-weight: 800;
+  font-weight: 600;
 }
 .policy {
   max-width: 760px;
@@ -694,7 +751,7 @@ input[type="checkbox"]:checked {
 }
 .policy h1 {
   font-size: 42px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.25;
   letter-spacing: -1.5px;
   margin: 14px 0 12px;
@@ -706,10 +763,10 @@ input[type="checkbox"]:checked {
 }
 .policy h2 {
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 700;
   margin: 40px 0 12px;
   padding-top: 12px;
-  border-top: 4px solid var(--ink);
+  border-top: 1px solid var(--ink);
 }
 .policy ul {
   padding-left: 22px;
@@ -721,7 +778,7 @@ input[type="checkbox"]:checked {
   width: 100%;
   border-collapse: collapse;
   background: var(--white);
-  border: 3px solid var(--ink);
+  border: 1px solid var(--ink);
   margin: 16px 0;
   font-size: 15px;
 }
@@ -730,11 +787,11 @@ input[type="checkbox"]:checked {
   text-align: left;
   vertical-align: top;
   padding: 10px 14px;
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 .policy-table th {
   background: var(--yellow);
-  font-weight: 900;
+  font-weight: 700;
 }
 .policy-table td:first-child {
   width: 46%;
@@ -771,7 +828,7 @@ input[type="checkbox"]:checked {
     border-right: 0;
   }
   .plan:nth-child(-n + 2) {
-    border-bottom: 3px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
   }
   .section-heading {
     display: block;
@@ -845,7 +902,7 @@ input[type="checkbox"]:checked {
     column-gap: 16px;
     padding: 30px 20px 16px;
     border-right: 0;
-    border-bottom: 3px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
   }
   .plan:last-child {
     border-bottom: 0;
