@@ -558,6 +558,124 @@ input[type="checkbox"] {
   margin-top: 38px;
   color: var(--muted);
 }
+.login-form {
+  max-width: 460px;
+  margin-top: 24px;
+}
+.login-form .button {
+  margin-top: 16px;
+}
+.home-panel {
+  max-width: 880px;
+}
+.home-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+.home-head .button {
+  flex-shrink: 0;
+  margin-top: 8px;
+  min-width: 0;
+}
+.feed-section {
+  margin: 8px 0 40px;
+}
+.feed-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.feed-head h2 {
+  font-family: var(--serif);
+  font-size: 28px;
+  margin: 0;
+}
+.feed-tabs {
+  display: flex;
+  border: 1px solid var(--ink);
+}
+.feed-tabs button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 16px;
+  font-size: 14px;
+  min-height: 40px;
+}
+.feed-tabs button + button {
+  border-left: 1px solid var(--ink);
+}
+.feed-tabs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.feed-note {
+  background: #f7e9e3;
+  border-left: 3px solid var(--clay);
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.feed-issue h3 {
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 28px 0 12px;
+}
+.story {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.story.followed {
+  border-color: var(--ink);
+  box-shadow: 4px 4px 0 #dfe7dc;
+}
+.story h4 {
+  font-size: 19px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+.story p {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.story-why {
+  color: #43564b;
+}
+.story a {
+  font-size: 13px;
+  color: var(--clay);
+}
+.home-panel #preferences-form {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+@media (max-width: 720px) {
+  .home-head {
+    flex-direction: column;
+    gap: 0;
+  }
+  .home-head .button {
+    margin: 0 0 8px;
+  }
+  .feed-head {
+    flex-wrap: wrap;
+  }
+  .feed-head h2 {
+    font-size: 24px;
+  }
+  .story {
+    padding: 16px;
+  }
+}
 @media (min-width: 1600px) {
   .site-shell {
     max-width: 1320px;
@@ -654,8 +772,14 @@ input[type="checkbox"] {
     height: 6px;
   }
   nav {
-    gap: 16px;
+    gap: 12px;
     font-size: 12px;
+  }
+  nav a {
+    white-space: nowrap;
+  }
+  .wordmark {
+    font-size: 16px;
   }
   .intro-grid {
     grid-template-columns: 1fr;
@@ -746,6 +870,11 @@ input[type="checkbox"] {
   }
   .unsubscribe-actions {
     flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  nav a[href="/#preview"] {
+    display: none;
   }
 }
 @media (max-width: 360px) {

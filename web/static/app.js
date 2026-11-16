@@ -3,7 +3,39 @@
 const byId = (id) => document.getElementById(id);
 const route = window.location.pathname;
 const fragmentToken = window.location.hash.slice(1);
-let manageToken = sessionStorage.getItem("brief_manage_token") || "";
+const TOKEN_KEY = "brief_manage_token";
+
+// The login link stays on this device until the reader signs out. Storage can be blocked, so never rely on it.
+function readToken() {
+  try {
+    return (
+      localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || ""
+    );
+  } catch {
+    return "";
+  }
+}
+
+function saveToken(value) {
+  try {
+    localStorage.setItem(TOKEN_KEY, value);
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* the session simply ends with this tab */
+  }
+}
+
+function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* nothing stored */
+  }
+}
+
+let manageToken = readToken();
+let feedScope = "followed";
 let pollingTimer;
 let qrObjectUrl;
 
@@ -11,7 +43,7 @@ if (route !== "/" && fragmentToken) {
   history.replaceState(null, "", route);
   if (route !== "/confirm") {
     manageToken = fragmentToken;
-    sessionStorage.setItem("brief_manage_token", manageToken);
+    saveToken(manageToken);
   }
 }
 
@@ -31,7 +63,9 @@ async function api(path, options = {}) {
       typeof result.detail === "string"
         ? result.detail
         : "请检查填写内容后重试。";
-    throw new Error(detail);
+    const failure = new Error(detail);
+    failure.status = response.status;
+    throw failure;
   }
   return result;
 }
@@ -104,6 +138,7 @@ function showPanel(name) {
   for (const id of [
     "landing",
     "confirmation-panel",
+    "login-panel",
     "management-panel",
     "unsubscribe-panel",
   ]) {
@@ -111,31 +146,153 @@ function showPanel(name) {
   }
 }
 
+function nextDelivery() {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Shanghai",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date()),
+  );
+  if (hour < 8) return "今天 08:00 早报";
+  if (hour < 20) return "今天 20:00 晚报";
+  return "明天 08:00 早报";
+}
+
+function formatExpiry(value) {
+  return new Date(value).toLocaleString("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function describeAccount(account) {
+  if (!account.confirmed) return "请先在确认邮件中验证邮箱。";
+  if (account.status === "unsubscribed")
+    return "当前已停止接收。想恢复，请回到首页重新申请并在邮件中确认邮箱。";
+  const next = nextDelivery();
+  if (account.delivery_mode === "paid")
+    return `订阅有效期至 ${formatExpiry(account.expires_at)}（北京时间）。下一封：${next}。`;
+  if (account.delivery_mode === "grace")
+    return `订阅已于 ${formatExpiry(account.expires_at)} 到期，三天宽限期内仍会收到简报，请尽快续费。下一封：${next}。`;
+  if (account.delivery_mode === "trial")
+    return `免费试读还剩 ${account.trial_remaining} 封。下一封：${next}。`;
+  if (account.expires_at) return "订阅已暂停，完成续费后恢复每日两封。";
+  return "免费试读已用完，续费后继续每天收到两封简报。";
+}
+
+function showLogin(message, error = false) {
+  clearToken();
+  manageToken = "";
+  history.replaceState(null, "", "/login");
+  showPanel("login-panel");
+  if (message) feedback("login-feedback", message, error);
+}
+
 async function loadAccount() {
   try {
     const account = await api("/api/account");
     byId("account-email").textContent = account.email;
-    let summary = `免费试读剩余 ${account.trial_remaining} 期。`;
-    if (account.expires_at) {
-      const expiry = new Date(account.expires_at);
-      summary = `订阅有效期至 ${expiry.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", dateStyle: "medium", timeStyle: "short" })}（北京时间）。`;
-    }
-    if (account.status === "unsubscribed")
-      summary += " 当前已停止接收，请回到首页重新申请并确认邮箱以恢复。";
-    if (account.status === "expired")
-      summary += " 订阅已暂停，完成续费后恢复。";
-    if (!account.confirmed) summary = "请先在确认邮件中验证邮箱。";
-    byId("account-summary").textContent = summary;
+    byId("account-summary").textContent = describeAccount(account);
     for (const input of byId("preferences-form").querySelectorAll(
       'input[name="preferences"]',
     )) {
       input.checked = account.preferences.includes(input.value);
     }
     updateTopicCount(byId("preferences-form"));
+    byId("feed-section").hidden = !account.confirmed;
+    if (account.confirmed) await loadFeed();
     return account;
   } catch (error) {
+    if (error.status === 401) {
+      showLogin("登录已失效，请重新获取登录链接。", true);
+      return;
+    }
     feedback("management-feedback", error.message, true);
-    byId("account-summary").textContent = "请使用最新邮件中的管理链接进入。";
+    byId("account-summary").textContent = "暂时无法读取订阅信息，请稍后刷新。";
+  }
+}
+
+function storyNode(story) {
+  const card = document.createElement("article");
+  card.className = story.followed ? "story followed" : "story";
+  const label = document.createElement("span");
+  label.className = "topic-label";
+  label.textContent = story.label;
+  const title = document.createElement("h4");
+  title.textContent = story.title;
+  card.append(label, title);
+  if (story.summary) {
+    const summary = document.createElement("p");
+    summary.textContent = story.summary;
+    card.append(summary);
+  }
+  if (story.importance) {
+    const why = document.createElement("p");
+    why.className = "story-why";
+    const strong = document.createElement("strong");
+    strong.textContent = "为什么重要 ";
+    why.append(strong, document.createTextNode(story.importance));
+    card.append(why);
+  }
+  const sourceName = story.source || "原始来源";
+  if (story.url) {
+    const link = document.createElement("a");
+    link.href = story.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `阅读来源 · ${sourceName} ↗`;
+    card.append(link);
+  } else if (story.source) {
+    const source = document.createElement("span");
+    source.className = "source-label";
+    source.textContent = story.source;
+    card.append(source);
+  }
+  return card;
+}
+
+function emptyFeed(text) {
+  const note = document.createElement("p");
+  note.className = "form-note";
+  note.textContent = text;
+  return note;
+}
+
+async function loadFeed() {
+  const container = byId("feed");
+  for (const button of document.querySelectorAll("[data-scope]"))
+    button.setAttribute(
+      "aria-pressed",
+      String(button.dataset.scope === feedScope),
+    );
+  try {
+    const feed = await api(`/api/feed?scope=${feedScope}`);
+    const note = byId("feed-note");
+    note.hidden = !feed.limited && !feed.general;
+    note.textContent = feed.limited
+      ? "当前只显示最新一期。续费后可回看近 7 天的全部期号，并继续每天收到两封邮件。"
+      : "你还没有选择关注的主题，下面是完整的通用版。在下方“推送板块”里勾选后，这里和邮件都会按你的兴趣排列。";
+    if (!feed.issues.length) {
+      container.replaceChildren(emptyFeed("第一期简报发布后，会在这里显示。"));
+      return;
+    }
+    const groups = feed.issues.map((issue) => {
+      const group = document.createElement("section");
+      group.className = "feed-issue";
+      const heading = document.createElement("h3");
+      heading.textContent = `${issue.date} · ${issue.edition_label}`;
+      group.append(heading, ...issue.stories.map(storyNode));
+      return group;
+    });
+    container.replaceChildren(...groups);
+  } catch (error) {
+    if (error.status === 401) {
+      showLogin("登录已失效，请重新获取登录链接。", true);
+      return;
+    }
+    container.replaceChildren(emptyFeed(error.message));
   }
 }
 
@@ -170,7 +327,7 @@ byId("confirm-button").addEventListener("click", async () => {
       body: JSON.stringify({ token: fragmentToken }),
     });
     manageToken = result.manage_token;
-    sessionStorage.setItem("brief_manage_token", manageToken);
+    saveToken(manageToken);
     history.replaceState(null, "", "/manage");
     showPanel("management-panel");
     feedback("management-feedback", "邮箱已确认，三期免费试读已开启。");
@@ -193,11 +350,41 @@ byId("preferences-form").addEventListener("submit", async (event) => {
       }),
     });
     feedback("management-feedback", result.message);
+    await loadFeed();
   } catch (error) {
     feedback("management-feedback", error.message, true);
   } finally {
     button.disabled = false;
   }
+});
+
+document.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-scope]");
+  if (!tab || tab.dataset.scope === feedScope) return;
+  feedScope = tab.dataset.scope;
+  loadFeed();
+});
+
+byId("login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = byId("login-button");
+  button.disabled = true;
+  feedback("login-feedback", "正在发送登录链接…");
+  try {
+    const result = await api("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ email: byId("login-email").value }),
+    });
+    feedback("login-feedback", result.message);
+  } catch (error) {
+    feedback("login-feedback", error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+byId("logout-button").addEventListener("click", () => {
+  showLogin("已退出登录。需要时可以再次获取登录链接。");
 });
 
 document.addEventListener("click", async (event) => {
@@ -303,8 +490,11 @@ if (route === "/confirm") {
     byId("confirm-button").disabled = true;
     feedback("confirm-feedback", "请打开确认邮件中的完整链接。", true);
   }
+} else if (route === "/login") {
+  showPanel("login-panel");
 } else if (route === "/manage") {
-  showPanel("management-panel");
+  if (manageToken) showPanel("management-panel");
+  else showLogin("请登录后查看你的主页。");
 } else if (route === "/unsubscribe") {
   showPanel("unsubscribe-panel");
 }
@@ -312,7 +502,7 @@ if (route === "/confirm") {
 const optionsReady = loadOptions();
 optionsReady
   .then(() => {
-    if (route === "/manage") loadAccount();
+    if (route === "/manage" && manageToken) loadAccount();
   })
   .catch(() => {
     const message = "主题与套餐暂时无法读取，请刷新后重试。";

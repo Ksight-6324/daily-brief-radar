@@ -21,7 +21,8 @@
           >DAILY BRIEF RADAR<span class="brand-dot" aria-hidden="true"></span
         ></a>
         <nav aria-label="主导航">
-          <a href="/#preview">今日简报</a><a href="/#plans">订阅方案</a>
+          <a href="/#preview">今日简报</a><a href="/#plans">订阅方案</a
+          ><a id="home-link" href="/manage">我的主页</a>
         </nav>
       </header>
 
@@ -173,22 +174,71 @@
         </section>
 
         <section
-          id="management-panel"
+          id="login-panel"
           class="account-panel"
+          hidden
+          aria-labelledby="login-heading"
+        >
+          <p class="panel-context">登录</p>
+          <h1 id="login-heading">回到你的简报主页。</h1>
+          <p>输入订阅邮箱，我们会发送一条登录链接。无需密码，链接一小时内有效。</p>
+          <form id="login-form" class="login-form">
+            <label class="field-label" for="login-email">邮箱地址</label>
+            <input
+              id="login-email"
+              type="email"
+              autocomplete="email"
+              placeholder="you@example.com"
+              maxlength="254"
+              required
+            />
+            <button class="button primary compact" id="login-button" type="submit">
+              发送登录链接
+            </button>
+          </form>
+          <p id="login-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <p class="form-note">
+            还没有订阅？<a href="/#subscribe">选择主题，免费试读</a>
+          </p>
+        </section>
+
+        <section
+          id="management-panel"
+          class="account-panel home-panel"
           hidden
           aria-labelledby="management-heading"
         >
-          <p class="panel-context">我的简报</p>
-          <h1 id="management-heading">留一点时间，给值得知道的事。</h1>
-          <p id="account-email" class="account-email"></p>
+          <div class="home-head">
+            <div>
+              <p class="panel-context">我的简报</p>
+              <h1 id="management-heading">留一点时间，给值得知道的事。</h1>
+              <p id="account-email" class="account-email"></p>
+            </div>
+            <button id="logout-button" type="button" class="button secondary compact">
+              退出登录
+            </button>
+          </div>
           <div id="account-summary" class="account-summary" role="status">
             正在读取订阅信息…
           </div>
+
+          <section id="feed-section" class="feed-section" aria-labelledby="feed-heading">
+            <div class="feed-head">
+              <h2 id="feed-heading">我的内容</h2>
+              <div class="feed-tabs" role="group" aria-label="内容范围">
+                <button type="button" data-scope="followed" aria-pressed="true">我关注的</button>
+                <button type="button" data-scope="all" aria-pressed="false">全部主题</button>
+              </div>
+            </div>
+            <p id="feed-note" class="feed-note" hidden></p>
+            <div id="feed" aria-live="polite"><p class="form-note">正在读取内容…</p></div>
+          </section>
+
           <form id="preferences-form">
             <fieldset>
-              <legend>调整你的阅读顺序</legend>
+              <legend>调整你的推送板块</legend>
               <p class="form-note">
-                可选任意数量，选中的主题排在前面。取消全部选择，可接收通用版。
+                可选任意数量。选中的主题在邮件中完整展开并排在最前，其余收进“其他值得一扫”。取消全部选择，可接收通用版。
               </p>
               <div class="preference-options" data-topics></div>
               <div class="topic-tools">
@@ -206,7 +256,7 @@
             </button>
           </form>
           <p id="management-feedback" class="feedback" role="status"></p>
-          <div class="renewal-options">
+          <div id="renewal" class="renewal-options">
             <h2>选择续费周期</h2>
             <p>提前续费保留剩余天数。到期后有三天宽限期。</p>
             <div id="renewal-plan-options" class="renewal-buttons"></div>
