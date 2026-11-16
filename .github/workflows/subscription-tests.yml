@@ -37,16 +37,20 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned: the deployment check below needs the Docker CLI and Compose plugin, which this image ships.
+    # ubuntu-latest moved to Ubuntu 26 in October 2026 and the check failed there with "command not found".
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - run: pip install -r requirements-dev.txt
       - run: python -m unittest discover -v
       - name: Validate deployment configuration
         run: |
+          docker --version
+          docker compose version
           cp .env.example .env
           export DOMAIN=brief.example.com
           docker compose config --format json > /tmp/brief-compose.json
