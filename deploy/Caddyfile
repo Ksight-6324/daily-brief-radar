@@ -1,0 +1,26 @@
+# HTTPS reverse proxy with automatic certificates. DOMAIN and UPSTREAM come from the environment.
+# Unsubscribe links carry a signed token in the query string, so the access log removes the query value
+# and never records credentials.
+{$DOMAIN} {
+	encode gzip
+
+	reverse_proxy {$UPSTREAM:127.0.0.1:8000}
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10mb
+			roll_keep 5
+			roll_keep_days 14
+		}
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete token
+				}
+				request>headers>Authorization delete
+				request>headers>Cookie delete
+			}
+		}
+	}
+}

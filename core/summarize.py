@@ -94,7 +94,7 @@ TA不喜欢空泛鼓励、鸡汤、模糊建议，喜欢直接分析问题、指
 SLOT_LABELS = {"noon": "午间", "evening": "晚间"}
 
 # ============ 已推送记录：避免午间和晚间两封简报重复同样的内容 ============
-SEEN_FILE = "seen_items.json"
+SEEN_FILE = os.environ.get("BRIEF_SEEN_FILE", "seen_items.json")  # 订阅版部署时指向持久磁盘
 SEEN_KEEP_DAYS = 14      # 记录保留多少天（RSS 里的旧文章早就滚出去了，不用存太久）
 SEEN_MAX_ITEMS = 2000
 SEEN_TITLES_HOURS = 36   # 最近多少小时内推送过的标题，会传给 AI 做"同一件事不要重复"的参考

@@ -1,0 +1,19 @@
+[Unit]
+Description=Daily Brief Radar nightly upkeep (backup, rotation, log trimming)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=brief
+Group=brief
+WorkingDirectory=/opt/brief/app
+EnvironmentFile=/etc/brief/brief.env
+# Backup first. Old backups are only deleted after the new one is written.
+ExecStart=/opt/brief/venv/bin/python -m subscription.cli backup --to /var/backups/brief --keep-days 30
+ExecStart=/opt/brief/venv/bin/python -m subscription.cli prune --days 30
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/brief /var/backups/brief

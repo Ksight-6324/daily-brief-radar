@@ -181,3 +181,13 @@
 - 清理 `style.css` 中不再使用的旧首屏与预览卡片规则。
 - 测试新增 1 项：首页开场文案与关键锚点、示例邮件两版各三条、无内联脚本与样式属性、静态文件可访问且 CSS 无外部引用。全套 85 项通过，`git diff --check` 通过。
 - 浏览器验收：桌面、375 像素、320 像素均无横向溢出，控制台无错误；示例邮件的早晚报切换与主题排序交互正常。未做真机与真实带宽下的动效性能检查。
+
+### 守护、发信域名与备份清理（2026 年 11 月 16 日）
+
+- 新增运维命令：`check`（健康检查，有错误时退出码为 1，覆盖发送积压、卡住的发送、待核对邮件、缺失快照、备份过期）、`check-dns`（通过 DNS-over-HTTPS 检查发信域名的 SPF、DKIM、DMARC，只发送域名）、`prune`（清除成功或跳过邮件超过 30 天的正文，删除过期限流记录，合并 WAL）、`backup --keep-days`（新备份写入成功后才删除超期备份，按文件名里的时间判断）。
+- 部署配置：`Dockerfile`、`docker-compose.yml`（网页、worker、scheduler、每日维护、Caddy HTTPS）、`deploy/Caddyfile`（访问日志去掉令牌）、`deploy/systemd/` 下三个服务、维护与健康检查定时器、`deploy/install-systemd.sh`、`deploy/brief.env.example`。服务自动重启且不限次数，以无权限用户运行，系统目录只读。
+- `core/summarize.py` 的去重记录路径新增环境变量 `BRIEF_SEEN_FILE`，默认值不变，部署时指向持久磁盘，避免容器重建后重复推送旧内容。
+- 隐私政策补写服务器访问日志（约 14 天）和邮件正文 30 天清除，测试同步。
+- 文档：`docs/deployment.md`（守护、监控、升级、数据与日志保存规范、上线检查清单）、`docs/email-domain-setup.md`。AGENTS.md 增加日志不得出现邮箱、令牌、正文的规则，已逐条核对现有输出。
+- 验证：新增 14 项测试（备份轮换、日志清理、健康检查、备份时效、DNS 判断与 DoH 解析），并对真实公共 DNS 做过一次查询。`bash -n` 检查安装脚本，YAML 解析 compose，检查单元文件结构。
+- 未验证：Docker 与 systemd 在本机不可用，compose、Caddyfile、systemd 单元和安装脚本没有在真实服务器上运行过。Resend 的实际 DNS 记录、Gmail 的 PASS 结果需要在你的域名上实测。

@@ -130,7 +130,8 @@ def main():
     elif args.command == "prune":
         print(json.dumps(prune_logs(store, args.days, now)))
     elif args.command == "check":
-        problems = health(store, now)
+        backup_dir = Path(os.environ["BRIEF_BACKUP_DIR"]) if os.environ.get("BRIEF_BACKUP_DIR") else None
+        problems = health(store, now, backup_dir=backup_dir)
         print(json.dumps({"ok": not any(level == "error" for level, _ in problems),
                           "problems": [{"level": level, "message": message} for level, message in problems]}, ensure_ascii=False))
         if any(level == "error" for level, _ in problems):

@@ -1,0 +1,77 @@
+# Five containers share one database volume: web/API, sender, scheduler, nightly upkeep and the HTTPS proxy.
+# Start with:  docker compose up -d --build
+# Required in .env: PUBLIC_BASE_URL (https://your-domain), DOMAIN (your-domain), RESEND_*, BRIEF_TOKEN_SECRET.
+
+x-app: &app
+  build: .
+  image: daily-brief-radar:latest
+  env_file: .env
+  restart: unless-stopped
+  volumes:
+    - brief-data:/data
+    - brief-backups:/backups
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  api:
+    <<: *app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "subscription.cli", "worker", "--watch"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "subscription.cli", "check"]
+      interval: 5m
+      timeout: 30s
+      retries: 2
+
+  scheduler:
+    <<: *app
+    command: ["python", "-m", "subscription.cli", "schedule", "--watch"]
+    stop_grace_period: 30s
+
+  # Runs once at start and then every 24 hours: backup, delete backups older than 30 days, trim old mail bodies.
+  maintenance:
+    <<: *app
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          python -m subscription.cli backup --to /backups --keep-days 30
+          python -m subscription.cli prune --days 30
+          sleep 86400
+        done
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      UPSTREAM: api:8000
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+
+volumes:
+  brief-data:
+  brief-backups:
+  caddy-data:
+  caddy-config:
+  caddy-logs:

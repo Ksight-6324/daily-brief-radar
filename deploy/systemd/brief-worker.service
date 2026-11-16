@@ -1,0 +1,26 @@
+[Unit]
+Description=Daily Brief Radar mail sender
+After=network-online.target brief-api.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=brief
+Group=brief
+WorkingDirectory=/opt/brief/app
+EnvironmentFile=/etc/brief/brief.env
+ExecStart=/opt/brief/venv/bin/python -m subscription.cli worker --watch
+Restart=always
+RestartSec=5
+# A task being sent when the service stops is recovered later through its lease, with the same idempotency key.
+TimeoutStopSec=30
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/brief
+
+[Install]
+WantedBy=multi-user.target

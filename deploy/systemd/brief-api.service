@@ -1,0 +1,25 @@
+[Unit]
+Description=Daily Brief Radar web and API
+After=network-online.target
+Wants=network-online.target
+# Keep restarting however often it fails. A crash loop is visible in journalctl and in `cli check`.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=brief
+Group=brief
+WorkingDirectory=/opt/brief/app
+EnvironmentFile=/etc/brief/brief.env
+ExecStart=/opt/brief/venv/bin/python -m uvicorn web.app:create_app --factory --host 127.0.0.1 --port 8000 --no-access-log
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/brief
+
+[Install]
+WantedBy=multi-user.target

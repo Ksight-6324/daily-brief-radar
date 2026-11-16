@@ -40,9 +40,20 @@ def prune_logs(store, days, now):
     return {"payloads_cleared": blanked, "rate_limit_rows_deleted": limits}
 
 
-def health(store, now, lag=timedelta(minutes=15)):
+def health(store, now, lag=timedelta(minutes=15), backup_dir=None):
     """Return [(level, message)]. Any 'error' means someone should look now."""
     problems = []
+    if backup_dir is not None:
+        newest = None
+        for path in (backup_dir.iterdir() if backup_dir.is_dir() else ()):
+            match = BACKUP_NAME.match(path.name)
+            if match and path.name.endswith(".db"):
+                made = datetime.strptime(match.group(1), "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
+                newest = max(newest, made) if newest else made
+        if newest is None:
+            problems.append(("error", "备份目录里没有任何备份"))
+        elif now - newest > timedelta(hours=36):
+            problems.append(("error", f"最近一次备份已超过 36 小时（{newest:%Y-%m-%d %H:%M} UTC），备份任务可能没有运行"))
     late = stamp(now - lag)
     with store.connect() as conn:
         waiting = conn.execute("""SELECT count(*) FROM delivery_log WHERE status IN ('pending','failed')

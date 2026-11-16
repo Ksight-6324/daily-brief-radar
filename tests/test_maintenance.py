@@ -100,6 +100,17 @@ class HealthTest(StoreCase):
         for fragment in ("error:1 封邮件超过 15 分钟", "error:1 封邮件需要人工核对", "warn:1 封邮件重试 6 次", "warn:1 笔已验签的付款"):
             self.assertIn(fragment, text)
 
+    def test_backup_age_is_checked_when_a_backup_directory_is_configured(self):
+        now = datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc)
+        self.store.freeze_issue("2026-11-15", {"ai": "来源|||t|||https://e.com|||x|||s|||i"}, now, edition="morning")
+        folder = self.store.path.parent / "age"
+        self.assertIn("没有任何备份", health(self.store, now, backup_dir=folder)[0][1])
+        folder.mkdir()
+        (folder / "brief-20261113-000000.db").write_text("old")
+        self.assertIn("超过 36 小时", health(self.store, now, backup_dir=folder)[0][1])
+        (folder / "brief-20261115-003000.db").write_text("new")
+        self.assertEqual(health(self.store, now, backup_dir=folder), [])
+
     def test_check_command_exits_nonzero_on_errors(self):
         env = {**os.environ, "PYTHONPATH": str(ROOT), "BRIEF_DB_PATH": str(self.store.path)}
         env.pop("BRIEF_TOKEN_SECRET", None)

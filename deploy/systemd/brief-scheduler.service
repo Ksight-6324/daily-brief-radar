@@ -1,0 +1,26 @@
+[Unit]
+Description=Daily Brief Radar scheduler (collect, freeze and queue the 08:00 and 20:00 editions)
+After=network-online.target brief-api.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=brief
+Group=brief
+WorkingDirectory=/opt/brief/app
+EnvironmentFile=/etc/brief/brief.env
+ExecStart=/opt/brief/venv/bin/python -m subscription.cli schedule --watch
+Restart=always
+RestartSec=10
+TimeoutStopSec=60
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# The generator writes its working files (category_news.json, daily_brief.md) next to the code.
+ReadWritePaths=/var/lib/brief /opt/brief/app
+
+[Install]
+WantedBy=multi-user.target

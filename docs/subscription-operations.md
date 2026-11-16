@@ -129,6 +129,12 @@ git diff --check
 
 本地测试结果与执行记录见 `docs/implementation.md`。共享开发规则见仓库根目录 `AGENTS.md`。
 
+## 部署与运维文档
+
+- 三个常驻进程的守护、健康检查、升级、数据与日志保存规范：`docs/deployment.md`。
+- SPF、DKIM、DMARC 配置与检查：`docs/email-domain-setup.md`。
+- 运维命令：`backup --to 目录 [--keep-days 30]` 备份并删除超期备份，`prune [--days 30]` 清除旧邮件正文并合并 WAL，`check` 健康检查（有错误时退出码为 1），`check-dns [域名]` 检查发信域名记录。
+
 ## 个人主页与登录
 
 - `/manage` 是读者的个人主页，显示订阅状态与下一封发送时间、所关注内容、推送板块编辑、续费和退订。`/login` 通过邮箱获取登录链接，无需密码。

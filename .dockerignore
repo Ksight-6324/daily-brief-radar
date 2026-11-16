@@ -1,0 +1,17 @@
+.git
+.github
+.playwright-cli
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+!.env.example
+var
+backups
+*.db
+*.db-*
+*.db.key
+.venv
+node_modules
+# The upstream setup guide page is large and not part of the subscription service.
+index.html

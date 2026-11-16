@@ -195,7 +195,7 @@ class WebTest(StoreCase):
 
     def test_privacy_policy_describes_the_data_the_system_really_keeps(self):
         page = self.client.get("/privacy").text
-        for fact in ("邮箱地址", "Resend", "支付宝", "删除账号", "不使用 Cookie", "30 天", "无法还原为邮箱"):
+        for fact in ("邮箱地址", "Resend", "支付宝", "删除账号", "不使用 Cookie", "30 天", "无法还原为邮箱", "发送成功 30 天后清除", "访问日志保存约 14 天"):
             self.assertIn(fact, page)
         self.assertNotIn("<script>", page.replace('<script src="/static/contact.js" defer></script>', ""))
         home = self.client.get("/").text
