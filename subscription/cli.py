@@ -24,6 +24,8 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
     commands.add_parser("status")
+    erase = commands.add_parser("delete-account")
+    erase.add_argument("email")
     backup = commands.add_parser("backup")
     backup.add_argument("--to", default="backups")
     commands.add_parser("scan")
@@ -93,6 +95,13 @@ def main():
             if not args.watch:
                 break
             time.sleep(60)
+    elif args.command == "delete-account":
+        with store.connect() as conn:
+            row = conn.execute("SELECT id FROM subscribers WHERE email=?", (args.email.strip().lower(),)).fetchone()
+        if row is None:
+            raise SystemExit("No account for that address")
+        store.delete_account(row["id"], now)
+        print("Account deleted")
     elif args.command == "backup":
         # SQLite's online backup is consistent while the API, worker and scheduler keep running.
         target = Path(args.to)

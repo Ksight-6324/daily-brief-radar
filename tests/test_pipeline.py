@@ -122,3 +122,14 @@ SECTION|||jobs
         restored = Store(copy)
         self.assertEqual(restored.subscriber(account["id"])["email"], "saved@example.com")
         self.assertEqual(restored.token(restored.subscriber(account["id"])), self.store.token(self.store.subscriber(account["id"])))
+
+    def test_delete_account_command_erases_by_address(self):
+        account = self.store.register("erase@example.com", [], NOW)
+        root = Path(__file__).resolve().parents[1]
+        env = {**os.environ, "PYTHONPATH": str(root), "BRIEF_DB_PATH": str(self.store.path)}
+        env.pop("BRIEF_TOKEN_SECRET", None)
+        run = lambda address: subprocess.run([sys.executable, "-m", "subscription.cli", "delete-account", address],
+                                             cwd=self.store.path.parent, env=env, capture_output=True, text=True)
+        self.assertEqual(run("ERASE@example.com").returncode, 0)
+        self.assertIsNone(self.store.subscriber(account["id"]))
+        self.assertNotEqual(run("erase@example.com").returncode, 0)

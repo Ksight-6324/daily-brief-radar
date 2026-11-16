@@ -3,7 +3,7 @@ import sqlite3
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from subscription.store import SECTIONS, Store
 from tests.support import NOW, StoreCase
@@ -153,3 +153,76 @@ class StoreTest(StoreCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AccountDeletionTest(StoreCase):
+    def rows(self, table, account):
+        with self.store.connect() as conn:
+            return conn.execute(f"SELECT * FROM {table} WHERE subscriber_id=?", (account["id"],)).fetchall()
+
+    def test_deletion_erases_personal_data_but_keeps_an_anonymous_payment_record(self):
+        account = self.subscriber("gone@example.com")
+        order = self.pay(account)
+        with self.store.transaction() as conn:
+            conn.execute("""INSERT INTO delivery_log(id,subscriber_id,task_type,business_key,status,payload,idempotency_key,created_at,next_attempt_at)
+                            VALUES('d','%s','daily_brief','k','success','{"to":["gone@example.com"]}','brief/d',?,?)""" % account["id"], (NOW.isoformat(),) * 2)
+            conn.execute("INSERT INTO renewal_reminders VALUES(?,?,?,?)", (account["id"], "c", "t3", NOW.isoformat()))
+        self.store.delete_account(account["id"], NOW)
+        self.assertIsNone(self.store.subscriber(account["id"]))
+        self.assertIsNone(self.store.subscription(account["id"]))
+        self.assertEqual(self.rows("delivery_log", account), [])
+        self.assertEqual(self.rows("renewal_reminders", account), [])
+        kept = self.store.order(order["order_token"])
+        self.assertEqual((kept["status"], kept["amount"], kept["payment_ref"], kept["subscriber_id"]), ("paid", 990, "trade-1", None))
+        with self.store.connect() as conn:
+            self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+            dump = " ".join(str(value) for table in ("subscribers", "orders", "deleted_accounts", "delivery_log")
+                            for row in conn.execute(f"SELECT * FROM {table}") for value in tuple(row))
+        self.assertNotIn("gone@example.com", dump)
+
+    def test_old_links_stop_working_and_the_same_address_can_sign_up_again(self):
+        account = self.subscriber("again@example.com")
+        self.store.delete_account(account["id"], NOW)
+        with self.assertRaises(ValueError):
+            self.store.account_for_token(account["manage_token"])
+        fresh = self.store.register("again@example.com", [], NOW)
+        self.assertNotEqual(fresh["id"], account["id"])
+        self.assertNotEqual(fresh["manage_token"], account["manage_token"])
+
+    def test_deleting_and_signing_up_again_does_not_reset_the_free_trial(self):
+        account = self.subscriber("trial@example.com")
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET trial_remaining=1 WHERE id=?", (account["id"],))
+        self.store.delete_account(account["id"], NOW)
+        fresh = self.store.register("TRIAL@example.com", [], NOW)
+        self.store.confirm(fresh["confirmation_token"], NOW)
+        self.assertEqual(self.store.subscriber(fresh["id"])["trial_remaining"], 1)
+        self.store.delete_account(fresh["id"], NOW)
+        again = self.store.register("trial@example.com", [], NOW)
+        self.assertEqual(self.store.subscriber(again["id"])["trial_remaining"], 1)
+
+    def test_deletion_does_not_lift_a_suppression(self):
+        account = self.subscriber("bounce@example.com")
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET suppressed_at=? WHERE id=?", (NOW.isoformat(), account["id"]))
+        self.store.delete_account(account["id"], NOW)
+        self.assertIsNone(self.store.register("bounce@example.com", [], NOW))
+
+    def test_a_recent_unpaid_order_blocks_deletion_until_the_payment_window_closes(self):
+        account = self.subscriber("pending@example.com")
+        order = self.store.create_order(account["id"], "weekly", NOW)
+        with self.assertRaises(ValueError):
+            self.store.delete_account(account["id"], NOW + timedelta(minutes=10))
+        self.assertIsNotNone(self.store.subscriber(account["id"]))
+        self.store.delete_account(account["id"], NOW + timedelta(minutes=31))
+        self.assertIsNone(self.store.order(order["order_token"])["subscriber_id"])
+
+    def test_a_payment_arriving_after_deletion_is_kept_as_unmatched_not_applied(self):
+        account = self.subscriber("late@example.com")
+        order = self.store.create_order(account["id"], "weekly", NOW)
+        self.store.delete_account(account["id"], NOW + timedelta(minutes=31))
+        self.assertEqual(self.store.confirm_payment(order["order_token"], "late-1", 300, NOW + timedelta(hours=1)), "unmatched")
+        self.assertEqual(self.store.confirm_payment(order["order_token"], "late-1", 300, NOW + timedelta(hours=2)), "unmatched")
+        self.assertEqual(self.store.order(order["order_token"])["payment_ref"], "late-1")
+        with self.store.connect() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM subscriptions").fetchone()[0], 0)

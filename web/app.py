@@ -33,6 +33,10 @@ class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
 
 
+class DeleteRequest(BaseModel):
+    confirm_email: str = Field(min_length=3, max_length=254)
+
+
 class Confirmation(BaseModel):
     token: str = Field(min_length=1, max_length=160)
 
@@ -164,6 +168,14 @@ def create_app(store=None, delivery=None, payment=None):
         store.unsubscribe(token)
         return {"message": "已退订，每日简报已停止。"}
 
+    @app.post("/api/account/delete")
+    def delete_account(values: DeleteRequest, request: Request):
+        row = account(request)
+        if values.confirm_email.strip().lower() != row["email"]:
+            raise HTTPException(400, "输入的邮箱与当前账号不一致")
+        store.delete_account(row["id"])
+        return {"message": "账号和相关数据已删除。"}
+
     @app.post("/api/orders")
     def create_order(values: OrderRequest, request: Request):
         row = account(request)
@@ -230,6 +242,7 @@ def create_app(store=None, delivery=None, payment=None):
     @app.get("/manage")
     @app.get("/unsubscribe")
     @app.get("/login")
+    @app.get("/delete")
     def page():
         return FileResponse(STATIC / "index.html")
 

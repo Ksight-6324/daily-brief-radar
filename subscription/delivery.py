@@ -183,7 +183,7 @@ class Delivery:
         # cannot interleave with the final eligibility check and provider submission.
         with self.store.transaction() as conn:
             current = conn.execute("SELECT status,attempts FROM delivery_log WHERE id=?", (task["id"],)).fetchone()
-            if current["status"] != "sending" or current["attempts"] != task["attempts"] + 1:
+            if current is None or current["status"] != "sending" or current["attempts"] != task["attempts"] + 1:
                 return "skipped"
             row = conn.execute(ACCOUNT_QUERY + " WHERE s.id=?", (task["subscriber_id"],)).fetchone()
             allowed = row and row["status"] != "unsubscribed" and not row["suppressed_at"]

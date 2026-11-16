@@ -279,3 +279,22 @@ class DeliveryTest(StoreCase):
         self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(minutes=1)), 0)
         self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(days=4)), 1)
         self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(days=6)), 1)
+
+    def test_worker_skips_a_task_whose_reader_was_deleted_after_it_was_picked(self):
+        account = self.subscriber("race@example.com")
+        self.assertEqual(self.delivery.enqueue_login("race@example.com", NOW), 1)
+        original = self.store.transaction
+        calls = []
+
+        @contextmanager
+        def racing():
+            calls.append(1)
+            if len(calls) == 2:
+                self.store.delete_account(account["id"], NOW)
+            with original() as conn:
+                yield conn
+
+        self.store.transaction = racing
+        self.addCleanup(setattr, self.store, "transaction", original)
+        self.assertEqual(self.delivery.run_once(NOW), "skipped")
+        self.assertEqual(ProviderHandler.calls, [])

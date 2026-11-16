@@ -792,6 +792,22 @@ input[type="checkbox"]:checked {
   padding-top: 8px;
 }
 
+.delete-details h2 {
+  font-size: 18px;
+  font-weight: 900;
+  margin: 24px 0 8px;
+}
+.delete-details ul {
+  margin: 0;
+  padding-left: 22px;
+}
+.delete-details li {
+  margin-bottom: 6px;
+}
+#delete-button {
+  margin-top: 16px;
+}
+
 @media (min-width: 1600px) {
   .site-shell {
     max-width: 1320px;

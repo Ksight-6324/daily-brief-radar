@@ -102,6 +102,9 @@ class Store:
                 conn.rollback()
                 raise
 
+    def email_digest(self, email):
+        return hmac.new(self.secret, b"deleted-email:" + email.encode(), hashlib.sha256).hexdigest()
+
     def token(self, row, purpose="manage"):
         message = f"{row['id']}.{row['token_nonce']}.{purpose}"
         signature = hmac.new(self.secret, message.encode(), hashlib.sha256).hexdigest()
@@ -157,17 +160,23 @@ class Store:
                 return None
             if row and row["suppressed_at"]:
                 return None
+            tombstone = None
+            if row is None:
+                tombstone = conn.execute("SELECT * FROM deleted_accounts WHERE email_hmac=?", (self.email_digest(email),)).fetchone()
+                if tombstone and tombstone["suppressed"]:
+                    return None
             if row and row["confirmation_expires_at"] > stamp(now):
                 return {"id": row["id"], "confirmation_token": self.token(row, "confirm"),
                         "manage_token": self.token(row)}
             subscriber_id = row["id"] if row else uuid4().hex
             nonce = secrets.token_hex(16)
             conn.execute(
-                """INSERT INTO subscribers(id,email,status,preferences,token_nonce,confirmation_expires_at,created_at)
-                VALUES(?,?,'pending',?,?,?,?) ON CONFLICT(email) DO UPDATE SET
+                """INSERT INTO subscribers(id,email,status,preferences,token_nonce,confirmation_expires_at,created_at,trial_remaining)
+                VALUES(?,?,'pending',?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET
                 token_nonce=excluded.token_nonce, confirmation_expires_at=excluded.confirmation_expires_at,
                 preferences=excluded.preferences""",
-                (subscriber_id, email, json.dumps(selected), nonce, stamp(now + timedelta(days=2)), stamp(now)),
+                (subscriber_id, email, json.dumps(selected), nonce, stamp(now + timedelta(days=2)), stamp(now),
+                 tombstone["trial_remaining"] if tombstone else 3),
             )
             account = dict(conn.execute("SELECT * FROM subscribers WHERE id=?", (subscriber_id,)).fetchone())
             conn.execute("""UPDATE delivery_log SET status='skipped',error_message='account links rotated'
@@ -198,6 +207,26 @@ class Store:
             conn.execute("""UPDATE subscribers SET status='unsubscribed', unsubscribed_at=?,
                             confirmation_expires_at=? WHERE id=?""",
                          (stamp(now), stamp(now - timedelta(seconds=1)), row["id"]))
+
+    def delete_account(self, subscriber_id, now=None):
+        """Erase a reader's personal data. Payment records stay, detached from the reader, for bookkeeping."""
+        now = now or utcnow()
+        with self.transaction() as conn:
+            row = conn.execute("SELECT * FROM subscribers WHERE id=?", (subscriber_id,)).fetchone()
+            if row is None:
+                raise ValueError("用户不存在")
+            # Alipay keeps a collection code open for 30 minutes. Deleting now could strand a payment.
+            if conn.execute("SELECT 1 FROM orders WHERE subscriber_id=? AND status='pending' AND created_at>?",
+                            (subscriber_id, stamp(now - timedelta(minutes=30)))).fetchone():
+                raise ValueError("有未完成的支付订单，请完成支付或等待 30 分钟后再删除")
+            conn.execute("""INSERT INTO deleted_accounts(email_hmac,trial_remaining,suppressed,deleted_at) VALUES(?,?,?,?)
+                ON CONFLICT(email_hmac) DO UPDATE SET trial_remaining=excluded.trial_remaining,
+                suppressed=MAX(suppressed,excluded.suppressed), deleted_at=excluded.deleted_at""",
+                         (self.email_digest(row["email"]), row["trial_remaining"], 1 if row["suppressed_at"] else 0, stamp(now)))
+            conn.execute("UPDATE orders SET subscriber_id=NULL WHERE subscriber_id=?", (subscriber_id,))
+            for table in ("subscriptions", "delivery_log", "renewal_reminders"):
+                conn.execute(f"DELETE FROM {table} WHERE subscriber_id=?", (subscriber_id,))
+            conn.execute("DELETE FROM subscribers WHERE id=?", (subscriber_id,))
 
     def create_order(self, subscriber_id, plan, now=None):
         if plan not in PLANS:
@@ -232,6 +261,11 @@ class Store:
                 if order["payment_ref"] != payment_ref:
                     raise ValueError("订单已关联其他支付流水")
                 return order["status"]
+            if order["subscriber_id"] is None:
+                # The reader deleted the account before this late payment arrived. Keep it for manual review.
+                conn.execute("UPDATE orders SET status='unmatched', payment_ref=?, paid_at=? WHERE id=?",
+                             (payment_ref, stamp(now), order["id"]))
+                return "unmatched"
             current = conn.execute("SELECT expires_at FROM subscriptions WHERE subscriber_id=?",
                                    (order["subscriber_id"],)).fetchone()
             start = max(datetime.fromisoformat(current["expires_at"]), now) if current else now

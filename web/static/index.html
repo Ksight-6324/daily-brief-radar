@@ -284,6 +284,50 @@
           </section>
           <p class="account-actions">
             <a id="unsubscribe-link" href="/unsubscribe">停止接收每日邮件</a>
+            · <a id="delete-link" href="/delete">删除账号</a>
+          </p>
+        </section>
+
+        <section
+          id="delete-panel"
+          class="account-panel"
+          hidden
+          aria-labelledby="delete-heading"
+        >
+          <p class="panel-context">删除账号</p>
+          <h1 id="delete-heading">删除我的账号和数据。</h1>
+          <p>删除后无法恢复，已停止发送的简报也不会补发。</p>
+          <div id="delete-details" class="delete-details">
+            <h2>会删除</h2>
+            <ul>
+              <li>邮箱地址、所选主题和订阅状态</li>
+              <li>订阅到期时间。未用完的订阅天数随账号失效，不会自动退款，需要退款请先联系我们</li>
+              <li>邮件发送记录和续费提醒记录</li>
+            </ul>
+            <h2>会保留</h2>
+            <ul>
+              <li>付款记录（订单号、金额、支付宝交易号）。已去掉与你邮箱的关联，仅用于对账</li>
+              <li>一个由邮箱生成、无法还原为邮箱的标记，只用来防止重复领取免费试读</li>
+            </ul>
+            <form id="delete-form" class="login-form">
+              <label class="field-label" for="delete-email">输入你的邮箱以确认</label>
+              <input
+                id="delete-email"
+                type="email"
+                autocomplete="off"
+                placeholder="you@example.com"
+                maxlength="254"
+                required
+              />
+              <button class="button danger compact" id="delete-button" type="submit">
+                永久删除我的账号
+              </button>
+            </form>
+            <p class="account-actions"><a href="/manage">返回我的主页</a></p>
+          </div>
+          <p id="delete-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <p id="delete-done" class="account-actions" hidden>
+            <a href="/">回到首页</a>
           </p>
         </section>
 

@@ -172,3 +172,23 @@ class WebTest(StoreCase):
         self.assertEqual(self.client.get("/api/account", headers=self.headers(account)).json()["delivery_mode"], None)
         pending = self.store.register("pending@example.com", [], NOW)
         self.assertEqual(self.client.get("/api/feed", headers=self.headers(pending)).status_code, 403)
+
+    def test_delete_account_needs_login_and_the_typed_address_and_then_signs_the_reader_out(self):
+        account = self.subscriber("bye@example.com")
+        self.assertEqual(self.client.post("/api/account/delete", json={"confirm_email": "bye@example.com"}).status_code, 401)
+        wrong = self.client.post("/api/account/delete", headers=self.headers(account), json={"confirm_email": "other@example.com"})
+        self.assertEqual(wrong.status_code, 400)
+        self.assertIsNotNone(self.store.subscriber(account["id"]))
+        done = self.client.post("/api/account/delete", headers=self.headers(account), json={"confirm_email": " Bye@Example.com "})
+        self.assertEqual(done.status_code, 200)
+        self.assertIsNone(self.store.subscriber(account["id"]))
+        self.assertEqual(self.client.get("/api/account", headers=self.headers(account)).status_code, 401)
+        self.assertEqual(self.client.get("/delete").status_code, 200)
+
+    def test_delete_account_is_refused_while_a_payment_is_pending(self):
+        account = self.subscriber("busy2@example.com")
+        self.store.create_order(account["id"], "weekly")
+        response = self.client.post("/api/account/delete", headers=self.headers(account), json={"confirm_email": "busy2@example.com"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("支付订单", response.json()["detail"])
+        self.assertIsNotNone(self.store.subscriber(account["id"]))

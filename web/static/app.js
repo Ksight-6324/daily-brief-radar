@@ -140,6 +140,7 @@ function showPanel(name) {
     "confirmation-panel",
     "login-panel",
     "management-panel",
+    "delete-panel",
     "unsubscribe-panel",
   ]) {
     byId(id).hidden = id !== name;
@@ -460,6 +461,33 @@ byId("unsubscribe-link").addEventListener("click", (event) => {
   showPanel("unsubscribe-panel");
 });
 
+byId("delete-link").addEventListener("click", (event) => {
+  event.preventDefault();
+  history.pushState(null, "", "/delete");
+  showPanel("delete-panel");
+});
+
+byId("delete-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = byId("delete-button");
+  button.disabled = true;
+  feedback("delete-feedback", "正在删除…");
+  try {
+    const result = await api("/api/account/delete", {
+      method: "POST",
+      body: JSON.stringify({ confirm_email: byId("delete-email").value }),
+    });
+    clearToken();
+    manageToken = "";
+    byId("delete-details").hidden = true;
+    byId("delete-done").hidden = false;
+    feedback("delete-feedback", result.message);
+  } catch (error) {
+    feedback("delete-feedback", error.message, true);
+    button.disabled = false;
+  }
+});
+
 byId("general-button").addEventListener("click", async () => {
   try {
     await api("/api/preferences", {
@@ -492,6 +520,9 @@ if (route === "/confirm") {
   }
 } else if (route === "/login") {
   showPanel("login-panel");
+} else if (route === "/delete") {
+  if (manageToken) showPanel("delete-panel");
+  else showLogin("请登录后再删除账号。");
 } else if (route === "/manage") {
   if (manageToken) showPanel("management-panel");
   else showLogin("请登录后查看你的主页。");

@@ -101,6 +101,15 @@ CREATE TABLE IF NOT EXISTS renewal_reminders (
     UNIQUE(subscriber_id, expires_at, reminder_type)
 );
 
+-- Kept after an account is deleted. email_hmac cannot be reversed to an address; it only stops
+-- deletion from resetting the free trial or from lifting a suppression.
+CREATE TABLE IF NOT EXISTS deleted_accounts (
+    email_hmac TEXT PRIMARY KEY,
+    trial_remaining INTEGER NOT NULL CHECK (trial_remaining BETWEEN 0 AND 3),
+    suppressed INTEGER NOT NULL DEFAULT 0,
+    deleted_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS request_limits (
     bucket TEXT PRIMARY KEY,
     window_start TEXT NOT NULL,
