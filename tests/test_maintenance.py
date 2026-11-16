@@ -54,6 +54,21 @@ class BackupRotationTest(StoreCase):
         self.assertEqual(sorted(report["removed"]), ["brief-20200101-000000.db", "brief-20200101-000000.db.key"])
         self.assertTrue(Path(report["backup"]).exists())
 
+    def test_old_crash_residue_is_rotated_and_recent_temporary_files_are_kept(self):
+        folder = self.store.path.parent / "crash-residue"
+        folder.mkdir()
+        old_names = [".backup-" + "a" * 32 + suffix for suffix in (".tmp", ".key")]
+        for name in old_names:
+            path = folder / name
+            path.write_text("old")
+            made = (NOW - timedelta(days=40)).timestamp()
+            os.utime(path, (made, made))
+        recent = folder / (".backup-" + "b" * 32 + ".tmp")
+        recent.write_text("running")
+        os.utime(recent, (NOW.timestamp(), NOW.timestamp()))
+        self.assertEqual(prune_backups(folder, 30, NOW), sorted(old_names))
+        self.assertTrue(recent.exists())
+
     def test_interrupted_backup_publishes_no_final_file_and_keeps_older_backups(self):
         folder = self.store.path.parent / "interrupted"
         folder.mkdir()
@@ -121,6 +136,15 @@ class HealthTest(StoreCase):
                 problems = health(self.store, now, backup_dir=folder)
                 self.assertTrue(any(level == "error" and "备份" in message for level, message in problems))
 
+    def test_missing_or_changed_file_key_makes_the_backup_unhealthy(self):
+        folder = self.store.path.parent / "missing-key"
+        report = maintenance.backup_store(self.store, folder, 30, NOW)
+        key = Path(report["backup"]).with_suffix(".db.key")
+        key.unlink()
+        self.assertTrue(any("令牌密钥" in message for _, message in health(self.store, NOW, backup_dir=folder)))
+        key.write_text("different-key", encoding="ascii")
+        self.assertTrue(any("令牌密钥" in message for _, message in health(self.store, NOW, backup_dir=folder)))
+
     def test_a_quiet_system_with_both_snapshots_is_healthy(self):
         morning = datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc)  # 09:00 Beijing
         self.store.freeze_issue("2026-11-15", {"ai": "来源|||t|||https://e.com|||x|||s|||i"}, morning, edition="morning")
@@ -155,6 +179,7 @@ class HealthTest(StoreCase):
         self.assertIn("超过 36 小时", health(self.store, now, backup_dir=folder)[0][1])
         with self.store.connect() as source, closing(sqlite3.connect(folder / "brief-20261115-003000.db")) as target:
             source.backup(target)
+        (folder / "brief-20261115-003000.db.key").write_bytes(self.store.secret)
         self.assertEqual(health(self.store, now, backup_dir=folder), [])
 
     def test_check_command_exits_nonzero_on_errors(self):

@@ -11,6 +11,7 @@ from uuid import uuid4
 from .store import BEIJING, EDITIONS, edition_for, stamp
 
 BACKUP_NAME = re.compile(r"^brief-(\d{8}-\d{6})\.db(?:\.key)?$")
+TEMP_BACKUP_NAME = re.compile(r"^\.backup-[0-9a-f]{32}\.(?:tmp|key)$")
 
 
 def verify_backup(path):
@@ -54,10 +55,16 @@ def prune_backups(directory, keep_days, now):
         return removed
     cutoff = now - timedelta(days=keep_days)
     for path in sorted(directory.iterdir()):
-        match = BACKUP_NAME.match(path.name)
-        if not match or not path.is_file():
+        if not path.is_file():
             continue
-        made = datetime.strptime(match.group(1), "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
+        match = BACKUP_NAME.match(path.name)
+        if match:
+            made = datetime.strptime(match.group(1), "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
+        elif TEMP_BACKUP_NAME.match(path.name):
+            # A killed process cannot clean its temporary files. Keep recent backups in progress.
+            made = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+        else:
+            continue
         if made < cutoff:
             path.unlink()
             removed.append(path.name)
@@ -97,8 +104,12 @@ def health(store, now, lag=timedelta(minutes=15), backup_dir=None):
         else:
             try:
                 verify_backup(newest_path)
+                if not os.environ.get("BRIEF_TOKEN_SECRET"):
+                    saved_key = newest_path.with_suffix(".db.key")
+                    if saved_key.read_text(encoding="ascii").encode() != store.secret:
+                        raise ValueError("Backup token key does not match")
             except (OSError, sqlite3.Error, ValueError):
-                problems.append(("error", "最新备份无法通过完整性检查，请立即重新备份并验证恢复"))
+                problems.append(("error", "最新备份或令牌密钥无法通过完整性检查，请立即重新备份并验证恢复"))
     late = stamp(now - lag)
     with store.connect() as conn:
         waiting = conn.execute("""SELECT count(*) FROM delivery_log WHERE status IN ('pending','failed')
