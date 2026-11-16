@@ -109,7 +109,18 @@ SECTION|||jobs
         self.assertEqual([(row["status"], row["task_type"]) for row in rows], expected)
 
     def test_backup_command_writes_a_consistent_copy_with_the_token_key(self):
-        account = self.store.register("saved@example.com", ["ai"], NOW)
+        from subscription.delivery import Delivery
+        from tests.test_delivery import SECTIONS
+        account = self.subscriber("saved@example.com")
+        trial = self.subscriber("saved-trial@example.com")
+        order = self.pay(account)
+        issue_id = self.store.freeze_issue("2026-11-15", SECTIONS, NOW)
+        delivery = Delivery(self.store, "https://brief.example.com", "Brief <brief@example.com>",
+                            client=Mock(send=Mock(return_value="saved-provider-id")))
+        self.assertEqual(delivery.enqueue_issue(issue_id, NOW), 2)
+        self.assertEqual(delivery.run_once(NOW), "success")
+        self.assertEqual(delivery.run_once(NOW), "success")
+        self.store.unsubscribe(trial["manage_token"], NOW)
         root = Path(__file__).resolve().parents[1]
         env = {**os.environ, "PYTHONPATH": str(root), "BRIEF_DB_PATH": str(self.store.path)}
         env.pop("BRIEF_TOKEN_SECRET", None)
@@ -122,6 +133,16 @@ SECTION|||jobs
         restored = Store(copy)
         self.assertEqual(restored.subscriber(account["id"])["email"], "saved@example.com")
         self.assertEqual(restored.token(restored.subscriber(account["id"])), self.store.token(self.store.subscriber(account["id"])))
+        self.assertEqual(restored.subscription(account["id"]), self.store.subscription(account["id"]))
+        self.assertEqual(restored.order(order["order_token"]), self.store.order(order["order_token"]))
+        self.assertEqual(restored.subscriber(trial["id"])["trial_remaining"], 2)
+        self.assertEqual(restored.subscriber(trial["id"])["status"], "unsubscribed")
+        self.assertEqual(json.loads(restored.issue("2026-11-15", "morning")["sections"]), SECTIONS)
+        with restored.connect() as conn:
+            self.assertEqual(conn.execute("SELECT count(*) FROM delivery_log WHERE status='success'").fetchone()[0], 2)
+        after_restore = Delivery(restored, "https://brief.example.com", "Brief <brief@example.com>")
+        self.assertEqual(after_restore.enqueue_issue(issue_id, NOW), 0)
+        self.assertIsNone(after_restore.run_once(NOW))
 
     def test_delete_account_command_erases_by_address(self):
         account = self.store.register("erase@example.com", [], NOW)

@@ -44,7 +44,21 @@ jobs:
       - name: Validate deployment configuration
         run: |
           cp .env.example .env
-          DOMAIN=brief.example.com docker compose config --quiet
+          export DOMAIN=brief.example.com
+          docker compose config --format json > /tmp/brief-compose.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          services = json.loads(Path('/tmp/brief-compose.json').read_text())['services']
+          expected = {'BRIEF_DB_PATH': '/data/brief.db', 'BRIEF_SEEN_FILE': '/data/seen_items.json',
+                      'BRIEF_BACKUP_DIR': '/backups'}
+          for name in ('api', 'worker', 'scheduler', 'maintenance'):
+              assert all(services[name]['environment'][key] == value for key, value in expected.items()), name
+          assert services['api']['environment']['FORWARDED_ALLOW_IPS'] == '*'
+          assert not services['api'].get('ports')
+          assert '--ping' in services['worker']['healthcheck']['test']
+          PY
           docker run --rm -e DOMAIN=brief.example.com \
             -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2 adapt --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null
