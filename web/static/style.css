@@ -142,100 +142,7 @@ nav a:hover {
   border-bottom-color: var(--red);
 }
 
-/* Hero */
-.intro-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 64px;
-  padding: 56px 0 64px;
-  align-items: start;
-}
-.intro-copy h1 {
-  font-size: clamp(44px, 6vw, 88px);
-  font-weight: 900;
-  line-height: 1.12;
-  letter-spacing: -2px;
-  margin: 0 0 28px;
-}
-.accent {
-  background: var(--yellow);
-  padding: 0 0.12em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-.intro-description {
-  font-size: 18px;
-  line-height: 1.9;
-  max-width: 470px;
-  margin-bottom: 20px;
-}
-.delivery-time {
-  display: inline-block;
-  background: var(--ink);
-  color: var(--paper);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  padding: 4px 12px;
-  margin-bottom: 28px;
-}
-.intro-copy .hero-action {
-  display: flex;
-  width: fit-content;
-}
-.hero-shapes {
-  display: flex;
-  margin-top: 40px;
-}
-.hero-shapes span {
-  display: block;
-  width: 72px;
-  height: 72px;
-}
-.shape-circle {
-  background: var(--red);
-  border-radius: 50%;
-}
-.shape-square {
-  background: var(--blue);
-}
-.shape-triangle {
-  background: var(--yellow);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-}
-
-/* Preview card */
-.paper-preview {
-  background: var(--white);
-  border: 3px solid var(--ink);
-  padding: 28px 30px 22px;
-  box-shadow: 12px 12px 0 var(--yellow);
-}
-.paper-masthead {
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 3px;
-}
-.paper-meta {
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--muted);
-  margin: 6px 0 20px;
-  padding-bottom: 14px;
-  border-bottom: 3px solid var(--ink);
-}
-.paper-preview h2 {
-  font-size: 36px;
-  font-weight: 900;
-  line-height: 1.25;
-  letter-spacing: -1px;
-  margin-bottom: 22px;
-}
-.preview-story {
-  padding: 0 0 18px;
-  margin-bottom: 18px;
-  border-bottom: 2px solid var(--ink);
-}
+/* Story labels, used by the reader's feed */
 .topic-label {
   display: inline-block;
   background: var(--ink);
@@ -247,40 +154,9 @@ nav a:hover {
   padding: 3px 8px;
   margin-bottom: 10px;
 }
-.preview-story:nth-of-type(1) .topic-label {
-  background: var(--red);
-  color: var(--white);
-}
-.preview-story:nth-of-type(2) .topic-label {
-  background: var(--blue);
-  color: var(--white);
-}
-.preview-story:nth-of-type(3) .topic-label {
-  background: var(--yellow);
-  color: var(--ink);
-}
-.preview-story h3 {
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-.preview-story p {
-  font-size: 14px;
-  line-height: 1.85;
-  color: #333;
-  margin-bottom: 8px;
-}
 .source-label {
   font-size: 12px;
   color: var(--muted);
-}
-.paper-footer {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 /* Forms */
@@ -881,36 +757,9 @@ input[type="checkbox"]:checked {
   }
 }
 
-@media (min-width: 1600px) {
-  .site-shell {
-    max-width: 1320px;
-  }
-  .intro-grid {
-    gap: 96px;
-    padding-top: 72px;
-  }
-  .intro-copy h1 {
-    font-size: 92px;
-  }
-}
 @media (max-width: 1000px) {
   .site-shell {
     width: calc(100% - 48px);
-  }
-  .intro-grid {
-    gap: 40px;
-  }
-  .intro-copy h1 {
-    font-size: 56px;
-  }
-  .intro-description {
-    font-size: 16px;
-  }
-  .paper-preview {
-    padding: 24px;
-  }
-  .paper-preview h2 {
-    font-size: 30px;
   }
   .preference-options {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -957,33 +806,6 @@ input[type="checkbox"]:checked {
   }
   nav a {
     white-space: nowrap;
-  }
-  .intro-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-    padding: 36px 0 40px;
-  }
-  .intro-copy h1 {
-    font-size: clamp(42px, 12.5vw, 58px);
-    line-height: 1.15;
-    letter-spacing: -1.5px;
-  }
-  .intro-description {
-    font-size: 15px;
-  }
-  .hero-shapes {
-    margin-top: 32px;
-  }
-  .hero-shapes span {
-    width: 56px;
-    height: 56px;
-  }
-  .paper-preview {
-    padding: 22px 20px;
-    box-shadow: 7px 7px 0 var(--yellow);
-  }
-  .paper-preview h2 {
-    font-size: 28px;
   }
   .subscribe-section,
   .plans-section {

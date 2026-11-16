@@ -202,6 +202,22 @@ class WebTest(StoreCase):
         self.assertEqual(home.count('href="/privacy"'), 2)
         self.assertEqual(home.count('href="/terms"'), 2)
 
+    def test_home_page_introduces_the_service_and_obeys_the_content_security_policy(self):
+        import re
+        page = self.client.get("/").text
+        for text in ("短视频的新闻，", "看了就", "不如每日", "三分钟", "每天汇总全球要点", "自动发到你的邮箱", "08:00", "20:00", "示例"):
+            self.assertIn(text, page)
+        for anchor in ('id="preview"', 'id="subscribe"', 'id="plans"', 'id="subscribe-form"', 'href="/#preview"'):
+            self.assertIn(anchor, page)
+        self.assertEqual(page.count('class="m-story"'), 6, "three sample stories for each edition")
+        self.assertNotRegex(page, r"<script(?![^>]*\bsrc=)", "the policy forbids inline scripts")
+        self.assertNotRegex(page, r'\sstyle="', "the policy forbids style attributes")
+        self.assertIn("script-src 'self'", self.client.get("/").headers["content-security-policy"])
+        for path in ("/static/landing.css", "/static/landing.js", "/static/style.css", "/static/app.js"):
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+            self.assertIn(f'"{path}"', page)
+        self.assertNotRegex(self.client.get("/static/landing.css").text, r"url\(|@import")
+
     def test_contact_details_come_from_configuration_and_bad_addresses_are_dropped(self):
         from unittest.mock import patch
         with patch.dict("os.environ", {"CONTACT_EMAIL": "Privacy@Example.com", "OPERATOR_NAME": " 示例工作室 "}):

@@ -11,7 +11,9 @@
     <title>Daily Brief Radar · 把今天的世界补全</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/landing.css" />
     <script src="/static/app.js" defer></script>
+    <script src="/static/landing.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">跳到主要内容</a>
@@ -29,57 +31,273 @@
 
       <main id="main">
         <div id="landing">
-          <section class="intro-grid" aria-labelledby="headline">
-            <div class="intro-copy">
-              <h1 id="headline">花<span class="accent">三分钟</span>，<br />把今天的<br />世界补全。</h1>
-              <p class="intro-description">
-                每天早晚，用文字简报读懂值得关注的事。
+          <section class="hero" aria-labelledby="headline">
+            <div class="hero-copy">
+              <p class="kicker">想要了解世界，却发现——</p>
+              <h1 id="headline">
+                <span class="line"><span>短视频的新闻，</span></span>
+                <span class="line"><span>看了就<em class="forget">忘</em>？</span></span>
+              </h1>
+              <p class="hero-answer">不如每日<mark>三分钟</mark>，去了解这个世界发生了什么！</p>
+              <p class="hero-lede">
+                Daily Brief Radar 每天汇总全球要点，整理成三条必知，讲清楚它为什么重要，再自动发到你的邮箱。
               </p>
               <p class="delivery-time">北京时间 08:00 / 20:00 · 每日两封</p>
-              <a class="button hero-action" href="#subscribe">选择关注主题</a>
-              <div class="hero-shapes" aria-hidden="true">
-                <span class="shape-circle"></span><span class="shape-square"></span
-                ><span class="shape-triangle"></span>
+              <div class="hero-actions">
+                <a class="button hero-action" href="#subscribe">开始我的三分钟</a>
+                <a class="button secondary" href="#preview">先看看邮件长什么样</a>
               </div>
+              <ul class="trust-row">
+                <li>附原始来源</li>
+                <li>15 个主题自选</li>
+                <li>免费试读 3 期</li>
+                <li>随时退订</li>
+              </ul>
             </div>
 
-            <article
-              id="preview"
-              class="paper-preview"
-              aria-labelledby="preview-title"
-            >
-              <div class="paper-masthead">DAILY BRIEF RADAR</div>
-              <p class="paper-meta">阅读示例 · 内容结构预览</p>
-              <h2 id="preview-title">今日三条必知</h2>
-              <section class="preview-story">
-                <span class="topic-label">股票经济</span>
-                <h3>读懂变化，也读懂它的影响。</h3>
-                <p>
-                  从利率、企业财报和宏观政策里，筛选值得关注的变化，再用两三句话说明为什么重要。
-                </p>
-                <span class="source-label">附原始来源，方便继续阅读</span>
-              </section>
-              <section class="preview-story">
-                <span class="topic-label">人工智能</span>
-                <h3>从产品发布，看到实际进展。</h3>
-                <p>
-                  跟进模型、工具与行业的重要动态，区分已经发生的更新和仍待观察的方向。
-                </p>
-                <span class="source-label">摘要依据公开报道与官方公告</span>
-              </section>
-              <section class="preview-story">
-                <span class="topic-label">就业机会</span>
-                <h3>关注机会，也关注市场信号。</h3>
-                <p>
-                  整理招聘、用工与薪资动态，帮助你理解就业市场的变化。岗位信息以招聘方原文为准。
-                </p>
-                <span class="source-label">明确区分招聘新闻与岗位信息</span>
-              </section>
-              <footer class="paper-footer">
-                <span>阅读来源</span><span>管理偏好</span><span>随时退订</span>
-              </footer>
-            </article>
+            <div class="hero-stage" aria-hidden="true">
+              <span class="px p-circle"><span class="shape"></span></span>
+              <span class="px p-tri"><span class="shape"></span></span>
+              <span class="px p-half"><span class="shape"></span></span>
+              <span class="px p-square"><span class="shape"></span></span>
+              <span class="px p-bar"><span class="shape"></span></span>
+              <div class="px hero-mail">
+                <div class="hm-bar"><i></i><i></i><i></i><span>08:00 · 早报</span></div>
+                <div class="hm-body">
+                  <strong>今日三条必知</strong>
+                  <div class="hm-row"><b></b><span></span></div>
+                  <div class="hm-row"><b></b><span></span></div>
+                  <div class="hm-row"><b></b><span></span></div>
+                  <em>三分钟读完</em>
+                </div>
+              </div>
+              <div class="px p-timer">
+                <svg viewBox="0 0 64 64" focusable="false">
+                  <circle class="t-track" cx="32" cy="32" r="26"></circle>
+                  <circle class="t-run" cx="32" cy="32" r="26"></circle>
+                </svg>
+                <b>3<small>MIN</small></b>
+              </div>
+            </div>
           </section>
+
+          <div class="ticker" aria-hidden="true">
+            <div class="ticker-track">
+              <div class="ticker-group">
+                <span>每日三分钟</span><span>08:00 早报</span><span>20:00 晚报</span><span>15 个主题自选</span
+                ><span>附原始来源</span><span>自动发到邮箱</span><span>随时退订</span><span>补全今天的世界</span>
+              </div>
+              <div class="ticker-group">
+                <span>每日三分钟</span><span>08:00 早报</span><span>20:00 晚报</span><span>15 个主题自选</span
+                ><span>附原始来源</span><span>自动发到邮箱</span><span>随时退订</span><span>补全今天的世界</span>
+              </div>
+            </div>
+          </div>
+
+          <section class="why" aria-labelledby="why-heading">
+            <span class="eyebrow">WHY 3 MIN</span>
+            <h2 id="why-heading">刷了一小时，还记得什么？</h2>
+            <div class="why-grid">
+              <div class="why-card why-scroll">
+                <p class="why-tag">短视频 · 一小时</p>
+                <div class="drift" aria-hidden="true">
+                  <span>又一条热搜</span><span>半截的新闻</span><span>三秒后划走</span><span>没看完的直播</span
+                  ><span>标题很吓人</span><span>神反转切片</span><span>下一个视频</span><span>刚才是什么？</span>
+                </div>
+                <p class="why-caption">热闹、零碎，划走就忘。</p>
+              </div>
+              <div class="why-arrow" aria-hidden="true"><i></i></div>
+              <div class="why-card why-keep">
+                <p class="why-tag">文字简报 · 三分钟</p>
+                <ol class="keep-list">
+                  <li>
+                    <b>01</b
+                    ><span><strong>发生了什么</strong>三条必知，用几句话讲清事实。</span>
+                  </li>
+                  <li>
+                    <b>02</b
+                    ><span><strong>为什么重要</strong>说明它和世界、和你的关系。</span>
+                  </li>
+                  <li>
+                    <b>03</b
+                    ><span><strong>接下来看什么</strong>留一个观察点，附原始来源。</span>
+                  </li>
+                </ol>
+                <p class="why-caption">读完，心里有数。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="features" aria-labelledby="features-heading">
+            <span class="eyebrow">WHAT IT DOES</span>
+            <h2 id="features-heading">一份简报，替你扫完全世界。</h2>
+            <p class="section-lede">
+              Daily Brief Radar 跟进各领域的公开报道，每天挑出最值得知道的要点，总结成文字简报，到点自动发到你的邮箱。
+            </p>
+            <div class="feature-grid">
+              <article class="feature f-red">
+                <span class="f-ico"></span>
+                <h3>每日总结全球要点</h3>
+                <p>从财经、科技、历史到体育游戏，在 15 个主题里挑出当天最值得关注的变化。</p>
+              </article>
+              <article class="feature f-blue">
+                <span class="f-ico"></span>
+                <h3>三分钟读完</h3>
+                <p>每期三条必知，每条都说清发生了什么、为什么重要，最后再留一个观察点。</p>
+              </article>
+              <article class="feature f-yellow">
+                <span class="f-ico"></span>
+                <h3>自动发到邮箱</h3>
+                <p>北京时间 08:00 早报、20:00 晚报准时送达。不用下载应用，也不用自己去找。</p>
+              </article>
+              <article class="feature f-ink">
+                <span class="f-ico"></span>
+                <h3>有来源，可退订</h3>
+                <p>每条附原始来源，AI 辅助摘要请以原文为准。你主动确认才开始，随时可以退订。</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="preview" class="sample" aria-labelledby="sample-heading">
+            <div class="sample-head">
+              <span class="eyebrow">IN YOUR INBOX</span>
+              <h2 id="sample-heading">邮箱里的每一期，长这样。</h2>
+              <p class="section-lede">
+                以下为示例，仅展示版式与结构。真实内容来自每期发送前冻结的快照。
+              </p>
+            </div>
+            <div class="sample-layout">
+              <div class="sample-tools">
+                <div class="edition-tabs" role="tablist" aria-label="选择示例版次">
+                  <button type="button" role="tab" id="tab-am" aria-controls="mail-am" aria-selected="true">
+                    08:00 早报
+                  </button>
+                  <button type="button" role="tab" id="tab-pm" aria-controls="mail-pm" aria-selected="false" tabindex="-1">
+                    20:00 晚报
+                  </button>
+                </div>
+                <p class="tools-title">试试看：选择你关注的主题</p>
+                <div id="demo-topics" class="demo-topics" aria-label="示例主题"></div>
+                <p id="demo-note" class="tools-note" role="status" aria-live="polite">
+                  未选择主题时显示通用版，全部展开。
+                </p>
+              </div>
+
+              <div class="mail-frame">
+                <div class="mail-chrome" aria-hidden="true"><i></i><i></i><i></i><span>收件箱</span></div>
+
+                <div id="mail-am" class="mail-panel" role="tabpanel" aria-labelledby="tab-am">
+                  <dl class="mail-meta">
+                    <dt>发件人</dt><dd>Daily Brief Radar</dd>
+                    <dt>主题</dt><dd>早报 · 今日三条必知</dd>
+                    <dt>时间</dt><dd>08:00（北京时间）</dd>
+                  </dl>
+                  <div class="mail-body">
+                    <p class="m-mast">DAILY BRIEF RADAR · 示例 · 早报</p>
+                    <h3 class="m-title">今日三条必知</h3>
+                    <div class="m-list">
+                      <article class="m-story" data-topic="股票经济">
+                        <span class="m-label tone-r">股票经济</span><span class="m-flag">你关注</span>
+                        <h4>利率按兵不动，市场在读措辞</h4>
+                        <div class="m-more">
+                          <p>本次决议维持基准利率不变，声明对通胀的表述有所调整，市场开始重新评估年内的降息节奏。</p>
+                          <p class="m-why"><strong>为什么重要</strong>利率预期会传导到房贷、理财收益和企业融资成本。</p>
+                        </div>
+                        <span class="m-src">来源 · 央行公告、财经媒体报道</span>
+                      </article>
+                      <article class="m-story" data-topic="人工智能">
+                        <span class="m-label tone-b">人工智能</span><span class="m-flag">你关注</span>
+                        <h4>新模型发布，先看实际能做什么</h4>
+                        <div class="m-more">
+                          <p>一家头部实验室发布新模型，官方强调长文本与工具调用能力提升，第三方评测尚未全部公开。</p>
+                          <p class="m-why"><strong>为什么重要</strong>分清已发布的功能和待验证的说法，才知道哪些真的会影响你的工作。</p>
+                        </div>
+                        <span class="m-src">来源 · 官方公告、科技媒体</span>
+                      </article>
+                      <article class="m-story" data-topic="就业机会">
+                        <span class="m-label tone-y">就业机会</span><span class="m-flag">你关注</span>
+                        <h4>招聘旺季，哪些岗位在回暖</h4>
+                        <div class="m-more">
+                          <p>整理自招聘平台与用工报告：部分技术类岗位需求回升，传统行业岗位保持平稳。</p>
+                          <p class="m-why"><strong>为什么重要</strong>了解市场冷热，有助于判断求职或转岗的时机。</p>
+                        </div>
+                        <span class="m-src">来源 · 招聘平台报告。岗位信息以招聘方原文为准</span>
+                      </article>
+                    </div>
+                    <p class="m-observe"><strong>一个观察点</strong>本周晚些时候公布的数据，可能改变市场对利率的预期。</p>
+                    <p class="m-foot">AI 辅助摘要，请以原始来源为准。 · 管理偏好 · 退订每日邮件</p>
+                  </div>
+                </div>
+
+                <div id="mail-pm" class="mail-panel" role="tabpanel" aria-labelledby="tab-pm" hidden>
+                  <dl class="mail-meta">
+                    <dt>发件人</dt><dd>Daily Brief Radar</dd>
+                    <dt>主题</dt><dd>晚报 · 今日三条必知</dd>
+                    <dt>时间</dt><dd>20:00（北京时间）</dd>
+                  </dl>
+                  <div class="mail-body">
+                    <p class="m-mast">DAILY BRIEF RADAR · 示例 · 晚报</p>
+                    <h3 class="m-title">今日三条必知</h3>
+                    <div class="m-list">
+                      <article class="m-story" data-topic="石油黄金">
+                        <span class="m-label tone-r">石油黄金</span><span class="m-flag">你关注</span>
+                        <h4>油价窄幅震荡，黄金走势分化</h4>
+                        <div class="m-more">
+                          <p>国际油价全天在狭窄区间内波动，黄金则在避险需求与美元走强之间来回拉扯。</p>
+                          <p class="m-why"><strong>为什么重要</strong>能源价格影响通胀预期，也影响各国央行的决策空间。</p>
+                        </div>
+                        <span class="m-src">来源 · 交易所行情、财经媒体报道</span>
+                      </article>
+                      <article class="m-story" data-topic="体育健康">
+                        <span class="m-label tone-b">体育健康</span><span class="m-flag">你关注</span>
+                        <h4>久坐一族的“碎片运动”，研究怎么说</h4>
+                        <div class="m-more">
+                          <p>一项综述指出，每小时起身活动几分钟，对代谢指标有积极影响，但效果因人而异。</p>
+                          <p class="m-why"><strong>为什么重要</strong>不必专门腾出整块时间，也能找到可行的起点。</p>
+                        </div>
+                        <span class="m-src">来源 · 学术期刊综述。不构成医疗建议</span>
+                      </article>
+                      <article class="m-story" data-topic="设计美术">
+                        <span class="m-label tone-y">设计美术</span><span class="m-flag">你关注</span>
+                        <h4>百年之后，极简设计为什么还在流行</h4>
+                        <div class="m-more">
+                          <p>近期展览与设计媒体回顾包豪斯的影响：功能优先、几何形态与原色，仍在塑造今天的界面与产品。</p>
+                          <p class="m-why"><strong>为什么重要</strong>理解设计语言的来路，更容易看懂眼前的产品为什么长这样。</p>
+                        </div>
+                        <span class="m-src">来源 · 展览报道、设计媒体</span>
+                      </article>
+                    </div>
+                    <p class="m-observe"><strong>一个观察点</strong>明早开盘前，留意市场是否会回应今天的能源数据。</p>
+                    <p class="m-foot">AI 辅助摘要，请以原始来源为准。 · 管理偏好 · 退订每日邮件</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="steps" aria-labelledby="steps-heading">
+            <span class="eyebrow">HOW IT WORKS</span>
+            <h2 id="steps-heading">三步，开始你的三分钟。</h2>
+            <ol class="steps-grid">
+              <li class="s-red">
+                <b>01</b>
+                <h3>选主题</h3>
+                <p>15 个主题任选，可以一个都不选，收到通用版。主题只影响排序。</p>
+              </li>
+              <li class="s-blue">
+                <b>02</b>
+                <h3>确认邮箱</h3>
+                <p>填写邮箱后，点开确认邮件里的链接。免费试读 3 期，按邮件封数计算。</p>
+              </li>
+              <li class="s-yellow">
+                <b>03</b>
+                <h3>每天两封</h3>
+                <p>北京时间 08:00 早报、20:00 晚报，到点出现在收件箱里。</p>
+              </li>
+            </ol>
+            <a class="button hero-action steps-cta" href="#subscribe">现在就去选主题</a>
+          </section>
+
 
           <section
             id="subscribe"
