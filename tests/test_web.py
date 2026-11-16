@@ -261,11 +261,15 @@ class WebTest(StoreCase):
     def test_home_page_introduces_the_service_and_obeys_the_content_security_policy(self):
         import re
         page = self.client.get("/").text
-        for text in ("短视频的新闻，", "看了就", "不如每日", "三分钟", "每天汇总全球要点", "自动发到你的邮箱", "08:00", "20:00", "示例"):
+        for text in ("短视频的新闻？", "看了就忘！", "三分钟", "每天汇总全球要点", "自动发到你的邮箱", "08:00", "20:00", "示例"):
             self.assertIn(text, page)
         for anchor in ('id="preview"', 'id="subscribe"', 'id="plans"', 'id="subscribe-form"', 'href="/#preview"'):
             self.assertIn(anchor, page)
-        self.assertEqual(page.count('class="m-story"'), 6, "three sample stories for each edition")
+        # The sample email names each part of a real issue, in the order readers meet them.
+        parts = re.findall(r'data-cap="([^"]+)"', page)
+        for part in ("刊头", "今日焦点", "主标题", "关键词", "一句话摘要", "和你有关"):
+            self.assertIn(part, parts)
+        self.assertLess(parts.index("今日焦点"), parts.index("主标题"))
         self.assertNotRegex(page, r"<script(?![^>]*\bsrc=)", "the policy forbids inline scripts")
         self.assertNotRegex(page, r'\sstyle="', "the policy forbids style attributes")
         self.assertIn("script-src 'self'", self.client.get("/").headers["content-security-policy"])
