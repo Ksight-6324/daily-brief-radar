@@ -13,7 +13,7 @@
       const link = document.createElement("a");
       link.href = `mailto:${contact.email}`;
       link.textContent = contact.email;
-      line.replaceChildren("隐私相关请求请发送邮件至 ", link, "。");
+      line.replaceChildren("如有疑问或请求，请发送邮件至 ", link, "。");
     } else {
       line.textContent = "运营者尚未配置联系邮箱。";
     }

@@ -251,6 +251,10 @@ def create_app(store=None, delivery=None, payment=None):
     def privacy():
         return FileResponse(STATIC / "privacy.html")
 
+    @app.get("/terms")
+    def terms():
+        return FileResponse(STATIC / "terms.html")
+
     @app.get("/")
     @app.get("/confirm")
     @app.get("/manage")

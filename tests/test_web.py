@@ -91,7 +91,7 @@ class WebTest(StoreCase):
         self.assertEqual(response.status_code, 400)
 
     def test_pages_include_security_headers_and_real_forms(self):
-        for route in ("/", "/confirm", "/manage", "/unsubscribe", "/login", "/delete", "/privacy"):
+        for route in ("/", "/confirm", "/manage", "/unsubscribe", "/login", "/delete", "/privacy", "/terms"):
             with self.subTest(route=route):
                 response = self.client.get(route)
                 self.assertEqual(response.status_code, 200)
@@ -197,9 +197,10 @@ class WebTest(StoreCase):
         page = self.client.get("/privacy").text
         for fact in ("邮箱地址", "Resend", "支付宝", "删除账号", "不使用 Cookie", "30 天", "无法还原为邮箱"):
             self.assertIn(fact, page)
-        self.assertNotIn("<script>", page.replace('<script src="/static/privacy.js" defer></script>', ""))
+        self.assertNotIn("<script>", page.replace('<script src="/static/contact.js" defer></script>', ""))
         home = self.client.get("/").text
         self.assertEqual(home.count('href="/privacy"'), 2)
+        self.assertEqual(home.count('href="/terms"'), 2)
 
     def test_contact_details_come_from_configuration_and_bad_addresses_are_dropped(self):
         from unittest.mock import patch
@@ -207,3 +208,17 @@ class WebTest(StoreCase):
             self.assertEqual(self.client.get("/api/options").json()["contact"], {"email": "privacy@example.com", "operator": "示例工作室"})
         with patch.dict("os.environ", {"CONTACT_EMAIL": "javascript:alert(1)", "OPERATOR_NAME": ""}):
             self.assertEqual(self.client.get("/api/options").json()["contact"], {"email": "", "operator": ""})
+
+    def test_terms_page_states_the_same_prices_periods_and_limits_the_system_enforces(self):
+        from subscription.store import GRACE_DAYS, PLANS, PLAN_LABELS
+        import re
+        page = self.client.get("/terms").text
+        text = re.sub(r"<[^>]+>|\s+", "", page)
+        for key, (amount, days) in PLANS.items():
+            row = f"{PLAN_LABELS[key]}{amount / 100:g}元{days}天"
+            self.assertIn(row, text, key)
+        self.assertIn(f"{GRACE_DAYS}天宽限期", text)
+        for fact in ("手动续费，不自动扣款", "每个邮箱享有3封免费试读", "不构成投资", "请以原始来源为准", "08:00", "20:00"):
+            self.assertIn(fact, text)
+        self.assertIn('href="/privacy"', page)
+        self.assertIn('id="contact-line"', page)
