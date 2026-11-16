@@ -34,7 +34,7 @@ services:
     <<: *app
     command: ["python", "-m", "subscription.cli", "worker", "--watch"]
     healthcheck:
-      test: ["CMD", "python", "-m", "subscription.cli", "check"]
+      test: ["CMD", "python", "-m", "subscription.cli", "check", "--ping"]
       interval: 5m
       timeout: 30s
       retries: 2

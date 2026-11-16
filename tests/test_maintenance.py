@@ -1,12 +1,19 @@
+import io
 import json
 import os
 import subprocess
 import sys
+import sqlite3
+from contextlib import closing, redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import requests
+
+from subscription import cli
 from subscription.dnscheck import check_domain, doh_lookup, domain_of
+from subscription import maintenance
 from subscription.maintenance import health, prune_backups, prune_logs
 from tests.support import NOW, StoreCase
 
@@ -47,6 +54,27 @@ class BackupRotationTest(StoreCase):
         self.assertEqual(sorted(report["removed"]), ["brief-20200101-000000.db", "brief-20200101-000000.db.key"])
         self.assertTrue(Path(report["backup"]).exists())
 
+    def test_interrupted_backup_publishes_no_final_file_and_keeps_older_backups(self):
+        folder = self.store.path.parent / "interrupted"
+        folder.mkdir()
+        self.make(folder, "20200101-000000")
+        with patch.object(self.store, "connect") as source:
+            source.return_value.__enter__.return_value.backup.side_effect = sqlite3.OperationalError("interrupted")
+            with self.assertRaises(sqlite3.OperationalError):
+                maintenance.backup_store(self.store, folder, 30, NOW)
+        self.assertEqual(sorted(path.name for path in folder.iterdir()),
+                         ["brief-20200101-000000.db", "brief-20200101-000000.db.key"])
+
+    def test_key_copy_failure_does_not_publish_the_database_or_rotate_backups(self):
+        folder = self.store.path.parent / "key-failure"
+        folder.mkdir()
+        self.make(folder, "20200101-000000")
+        with patch.object(maintenance.shutil, "copyfile", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                maintenance.backup_store(self.store, folder, 30, NOW)
+        self.assertEqual(sorted(path.name for path in folder.iterdir()),
+                         ["brief-20200101-000000.db", "brief-20200101-000000.db.key"])
+
 
 class LogTrimTest(StoreCase):
     def row(self, conn, account, key, status, created, payload='{"to":["x@example.com"],"html":"body"}'):
@@ -76,6 +104,23 @@ class LogTrimTest(StoreCase):
 
 
 class HealthTest(StoreCase):
+    def test_first_evening_launch_checks_the_current_edition(self):
+        now = datetime(2026, 11, 16, 13, tzinfo=timezone.utc)
+        self.store.freeze_issue("2026-11-16", {"ai": "source|||title|||https://e.com|||tag|||summary|||impact"}, now, edition="evening")
+        self.assertEqual(health(self.store, now), [])
+
+    def test_a_fresh_empty_or_invalid_backup_is_an_error(self):
+        now = datetime(2026, 11, 15, 1, tzinfo=timezone.utc)
+        self.store.freeze_issue("2026-11-15", {"ai": "source|||title|||https://e.com|||tag|||summary|||impact"}, now, edition="morning")
+        folder = self.store.path.parent / "invalid"
+        folder.mkdir()
+        path = folder / "brief-20261115-003000.db"
+        for content in (b"", b"not a database"):
+            with self.subTest(content=content):
+                path.write_bytes(content)
+                problems = health(self.store, now, backup_dir=folder)
+                self.assertTrue(any(level == "error" and "备份" in message for level, message in problems))
+
     def test_a_quiet_system_with_both_snapshots_is_healthy(self):
         morning = datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc)  # 09:00 Beijing
         self.store.freeze_issue("2026-11-15", {"ai": "来源|||t|||https://e.com|||x|||s|||i"}, morning, edition="morning")
@@ -97,7 +142,7 @@ class HealthTest(StoreCase):
                                 VALUES(?,?,'daily_brief',?,?,'{}',?,?,?,?)""", (key, account["id"], key, status, "brief/" + key, attempts, old, old))
         self.store.confirm_payment("DBRunknown", "trade-x", 300, now)
         text = " ".join(f"{level}:{message}" for level, message in health(self.store, now))
-        for fragment in ("error:1 封邮件超过 15 分钟", "error:1 封邮件需要人工核对", "warn:1 封邮件重试 6 次", "warn:1 笔已验签的付款"):
+        for fragment in ("error:1 封邮件超过 15 分钟", "error:1 封邮件需要人工核对", "error:1 封邮件重试 6 次", "error:1 笔已验签的付款"):
             self.assertIn(fragment, text)
 
     def test_backup_age_is_checked_when_a_backup_directory_is_configured(self):
@@ -108,7 +153,8 @@ class HealthTest(StoreCase):
         folder.mkdir()
         (folder / "brief-20261113-000000.db").write_text("old")
         self.assertIn("超过 36 小时", health(self.store, now, backup_dir=folder)[0][1])
-        (folder / "brief-20261115-003000.db").write_text("new")
+        with self.store.connect() as source, closing(sqlite3.connect(folder / "brief-20261115-003000.db")) as target:
+            source.backup(target)
         self.assertEqual(health(self.store, now, backup_dir=folder), [])
 
     def test_check_command_exits_nonzero_on_errors(self):
@@ -120,6 +166,28 @@ class HealthTest(StoreCase):
         # Outside 08:30-20:00 Beijing time the result depends on the clock, so assert the contract only.
         self.assertEqual(result.returncode, 0 if report["ok"] else 1)
         self.assertEqual(set(report), {"ok", "problems"})
+
+    def test_external_monitor_is_pinged_only_when_healthy_and_failures_hide_the_url(self):
+        cases = (([], None, True), ([("error", "worker failed")], None, False),
+                 ([], requests.ConnectionError("https://monitor.example/private-test-token"), False))
+        for problems, failure, expected_ok in cases:
+            with self.subTest(problems=problems, network_error=bool(failure)):
+                output = io.StringIO()
+                with patch.object(cli, "load_dotenv"), patch.object(cli, "Store", return_value=self.store), \
+                     patch.object(cli, "health", return_value=list(problems)), \
+                     patch.object(sys, "argv", ["brief", "check", "--ping"]), \
+                     patch.dict(os.environ, {"HEALTHCHECK_PING_URL": "https://monitor.example/private-test-token"}), \
+                     patch.object(cli.requests, "get", side_effect=failure) as get, redirect_stdout(output):
+                    if expected_ok:
+                        cli.main()
+                    else:
+                        with self.assertRaises(SystemExit) as exit:
+                            cli.main()
+                        self.assertEqual(exit.exception.code, 1)
+                self.assertEqual(get.call_count, 0 if problems else 1)
+                report = json.loads(output.getvalue())
+                self.assertEqual(report["ok"], expected_ok)
+                self.assertNotIn("private-test-token", output.getvalue())
 
 
 def records(table):

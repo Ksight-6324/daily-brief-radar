@@ -3,18 +3,16 @@
 import argparse
 import json
 import os
-import shutil
-import sqlite3
 import subprocess
 import time
-from contextlib import closing
 from pathlib import Path
 
+import requests
 from dotenv import load_dotenv
 
 from .delivery import Delivery
 from .dnscheck import check_domain, domain_of
-from .maintenance import health, prune_backups, prune_logs
+from .maintenance import backup_store, health, prune_logs
 from .pipeline import freeze_markdown, generate_markdown
 from .store import BEIJING, EDITIONS, Store, edition_for, utcnow
 
@@ -33,7 +31,8 @@ def main():
     backup.add_argument("--keep-days", type=int, default=30, help="delete older backups after a new one succeeds, 0 keeps all")
     prune = commands.add_parser("prune")
     prune.add_argument("--days", type=int, default=30)
-    commands.add_parser("check")
+    check = commands.add_parser("check")
+    check.add_argument("--ping", action="store_true", help="notify the configured external monitor after a healthy check")
     dns = commands.add_parser("check-dns")
     dns.add_argument("domain", nargs="?")
     dns.add_argument("--selector", default="resend")
@@ -113,25 +112,18 @@ def main():
         store.delete_account(row["id"], now)
         print("Account deleted")
     elif args.command == "backup":
-        # SQLite's online backup is consistent while the API, worker and scheduler keep running.
-        target = Path(args.to)
-        target.mkdir(parents=True, exist_ok=True)
-        destination = target / f"brief-{now:%Y%m%d-%H%M%S}.db"
-        with store.connect() as source, closing(sqlite3.connect(destination)) as copy:
-            source.backup(copy)
-        key = store.path.with_suffix(store.path.suffix + ".key")
-        if key.exists():
-            shutil.copy2(key, destination.with_suffix(".db.key"))
-        for saved in (destination, destination.with_suffix(".db.key")):
-            if saved.exists():
-                os.chmod(saved, 0o600)
-        removed = prune_backups(target, args.keep_days, now)
-        print(json.dumps({"backup": str(destination), "removed": removed}))
+        print(json.dumps(backup_store(store, Path(args.to), args.keep_days, now)))
     elif args.command == "prune":
         print(json.dumps(prune_logs(store, args.days, now)))
     elif args.command == "check":
         backup_dir = Path(os.environ["BRIEF_BACKUP_DIR"]) if os.environ.get("BRIEF_BACKUP_DIR") else None
         problems = health(store, now, backup_dir=backup_dir)
+        ping_url = os.environ.get("HEALTHCHECK_PING_URL")
+        if args.ping and ping_url and not any(level == "error" for level, _ in problems):
+            try:
+                requests.get(ping_url, timeout=10).raise_for_status()
+            except requests.RequestException:
+                problems.append(("error", "外部健康探测失败，请检查监控地址与网络"))
         print(json.dumps({"ok": not any(level == "error" for level, _ in problems),
                           "problems": [{"level": level, "message": message} for level, message in problems]}, ensure_ascii=False))
         if any(level == "error" for level, _ in problems):

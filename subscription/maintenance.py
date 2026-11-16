@@ -1,11 +1,49 @@
 """Routine upkeep: backup rotation, log trimming and a health check for an external monitor."""
 
+import os
 import re
+import shutil
+import sqlite3
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
-from .store import BEIJING, EDITIONS, stamp
+from .store import BEIJING, EDITIONS, edition_for, stamp
 
 BACKUP_NAME = re.compile(r"^brief-(\d{8}-\d{6})\.db(?:\.key)?$")
+
+
+def verify_backup(path):
+    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
+        if conn.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
+            raise ValueError("Backup integrity check failed")
+        conn.execute("SELECT id FROM subscribers LIMIT 1").fetchall()
+
+
+def backup_store(store, directory, keep_days, now):
+    """Publish a verified online backup, then rotate older copies."""
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    destination = directory / f"brief-{now:%Y%m%d-%H%M%S}.db"
+    temporary = directory / f".backup-{uuid4().hex}.tmp"
+    temporary_key = temporary.with_suffix(".key")
+    try:
+        descriptor = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(descriptor)
+        with store.connect() as source, closing(sqlite3.connect(temporary)) as copy:
+            source.backup(copy)
+        verify_backup(temporary)
+        key = store.path.with_suffix(store.path.suffix + ".key")
+        if key.exists():
+            descriptor = os.open(temporary_key, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(descriptor)
+            shutil.copyfile(key, temporary_key)
+            os.replace(temporary_key, destination.with_suffix(".db.key"))
+        # The final database name is visible to health checks only after verification succeeds.
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+        temporary_key.unlink(missing_ok=True)
+    return {"backup": str(destination), "removed": prune_backups(directory, keep_days, now)}
 
 
 def prune_backups(directory, keep_days, now):
@@ -45,15 +83,22 @@ def health(store, now, lag=timedelta(minutes=15), backup_dir=None):
     problems = []
     if backup_dir is not None:
         newest = None
+        newest_path = None
         for path in (backup_dir.iterdir() if backup_dir.is_dir() else ()):
             match = BACKUP_NAME.match(path.name)
-            if match and path.name.endswith(".db"):
+            if match and path.name.endswith(".db") and path.is_file():
                 made = datetime.strptime(match.group(1), "%Y%m%d-%H%M%S").replace(tzinfo=timezone.utc)
-                newest = max(newest, made) if newest else made
+                if newest is None or made > newest:
+                    newest, newest_path = made, path
         if newest is None:
             problems.append(("error", "备份目录里没有任何备份"))
         elif now - newest > timedelta(hours=36):
             problems.append(("error", f"最近一次备份已超过 36 小时（{newest:%Y-%m-%d %H:%M} UTC），备份任务可能没有运行"))
+        else:
+            try:
+                verify_backup(newest_path)
+            except (OSError, sqlite3.Error, ValueError):
+                problems.append(("error", "最新备份无法通过完整性检查，请立即重新备份并验证恢复"))
     late = stamp(now - lag)
     with store.connect() as conn:
         waiting = conn.execute("""SELECT count(*) FROM delivery_log WHERE status IN ('pending','failed')
@@ -68,16 +113,17 @@ def health(store, now, lag=timedelta(minutes=15), backup_dir=None):
             problems.append(("error", f"{review} 封邮件需要人工核对服务商记录"))
         dead = conn.execute("SELECT count(*) FROM delivery_log WHERE status='failed' AND attempts>=6").fetchone()[0]
         if dead:
-            problems.append(("warn", f"{dead} 封邮件重试 6 次后仍失败"))
+            problems.append(("error", f"{dead} 封邮件重试 6 次后仍失败"))
         unmatched = conn.execute("SELECT count(*) FROM orders WHERE status='unmatched'").fetchone()[0]
         if unmatched:
-            problems.append(("warn", f"{unmatched} 笔已验签的付款没有匹配订单，需要人工处理"))
+            problems.append(("error", f"{unmatched} 笔已验签的付款没有匹配订单，需要人工处理"))
         local = now.astimezone(BEIJING)
-        for edition, (hour, label) in EDITIONS.items():
-            release = local.replace(hour=hour, minute=0, second=0, microsecond=0)
-            if local >= release + timedelta(minutes=30):
-                exists = conn.execute("SELECT 1 FROM daily_issue WHERE issue_date=? AND edition=?",
-                                      (local.date().isoformat(), edition)).fetchone()
-                if not exists:
-                    problems.append(("error", f"今天的{label}在 {hour:02d}:30 后仍没有快照，scheduler 可能没有运行或生成失败"))
+        edition = edition_for(now)
+        hour, label = EDITIONS[edition]
+        release = local.replace(hour=hour, minute=0, second=0, microsecond=0)
+        if local >= release + timedelta(minutes=30):
+            exists = conn.execute("SELECT 1 FROM daily_issue WHERE issue_date=? AND edition=?",
+                                  (local.date().isoformat(), edition)).fetchone()
+            if not exists:
+                problems.append(("error", f"今天的{label}在 {hour:02d}:30 后仍没有快照，scheduler 可能没有运行或生成失败"))
     return problems

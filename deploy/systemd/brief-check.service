@@ -8,10 +8,8 @@ Group=brief
 WorkingDirectory=/opt/brief/app
 EnvironmentFile=/etc/brief/brief.env
 Environment=BRIEF_BACKUP_DIR=/var/backups/brief
-ExecStart=/opt/brief/venv/bin/python -m subscription.cli check
-# Runs only when the check passed. An external dead-man's-switch (for example Healthchecks.io) then alerts you
-# when the pings stop, which also covers the whole server going down. The ping carries no reader data.
-ExecStartPost=/bin/sh -c 'if [ -n "$$HEALTHCHECK_PING_URL" ]; then curl -fsS -m 10 --retry 3 "$$HEALTHCHECK_PING_URL" > /dev/null; fi'
+# Ping only after a healthy check. Missing pings also detect a whole-server outage.
+ExecStart=/opt/brief/venv/bin/python -m subscription.cli check --ping
 
 NoNewPrivileges=true
 PrivateTmp=true
