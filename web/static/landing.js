@@ -211,7 +211,7 @@
       },
       { threshold: 0.35 },
     );
-    for (const big of $$(".page-big", landing)) {
+    for (const big of $$(".page-big, .split-right", landing)) {
       $$(":scope > span", big).forEach((span, n) => {
         const inner = document.createElement("i");
         inner.append(...span.childNodes);
@@ -225,6 +225,22 @@
       small.classList.add("fade-late", "will-fade");
       observer.observe(small);
     }
+  }
+
+  // ---- Three must-knows: the title settles, the three items fly in one by one, then slide away --
+  const three = $(".three");
+  if (three && !reduceMotion) {
+    three.classList.add("is-live");
+    const items = $$(".three-list li", three);
+    frameHandlers.push(() => {
+      const p = pinProgress(three);
+      three.style.setProperty("--ti", clamp((p + 0.02) / 0.1).toFixed(3));
+      three.style.setProperty("--to", clamp((p - 0.88) / 0.1).toFixed(3));
+      items.forEach((item, i) => {
+        item.style.setProperty("--in", clamp((p - 0.1 - i * 0.13) / 0.14).toFixed(3));
+        item.style.setProperty("--out", clamp((p - 0.66 - i * 0.07) / 0.14).toFixed(3));
+      });
+    });
   }
 
   // ---- Anatomy: the email builds itself part by part as you scroll -----------------------------
