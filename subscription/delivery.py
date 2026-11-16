@@ -138,6 +138,12 @@ class Delivery:
                     expiry = datetime.fromisoformat(row["expires_at"])
                     days = (expiry.astimezone(BEIJING).date() - now.astimezone(BEIJING).date()).days
                     reminder = {7: "t7", 3: "t3", 1: "t1"}.get(days)
+                    if reminder == "t7":
+                        # A seven-day plan is always seven days from expiry right after payment, so the notice would be noise.
+                        plan = conn.execute("""SELECT o.plan FROM subscriptions p JOIN orders o ON o.id=p.expiry_order_id
+                                               WHERE p.subscriber_id=?""", (row["id"],)).fetchone()
+                        if plan and plan["plan"] == "weekly":
+                            reminder = None
                     if now >= expiry + timedelta(days=GRACE_DAYS):
                         reminder = "paused"
                         conn.execute("UPDATE subscriptions SET status='expired',updated_at=? WHERE subscriber_id=?", (stamp(now), row["id"]))

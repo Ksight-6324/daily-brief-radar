@@ -44,7 +44,7 @@ Copy-Item .env.example .env
 python -m subscription.cli init
 ```
 
-已有 v1 数据库会在启动时自动事务升级到 v2。升级前停止旧版进程并备份数据库及令牌密钥，再启动新版 API、worker 和 scheduler。升级保留订单、有效期、偏好及历史快照，将旧快照标记为 legacy。旧日报的 pending／failed 任务转 skipped，sending 转 needs_review，需核对服务商记录。新期号分别使用 `YYYY-MM-DD/morning` 和 `YYYY-MM-DD/evening`。
+已有 v1、v2 数据库会在启动时自动事务升级到 v3（v3 新增 `login_link` 邮件类型，重建发送表并保留全部记录）。升级前停止旧版进程并备份数据库及令牌密钥，再启动新版 API、worker 和 scheduler。升级保留订单、有效期、偏好及历史快照，将旧快照标记为 legacy。旧日报的 pending／failed 任务转 skipped，sending 转 needs_review，需核对服务商记录。新期号分别使用 `YYYY-MM-DD/morning` 和 `YYYY-MM-DD/evening`。
 
 三个终端均在仓库根目录、相同虚拟环境运行。
 
@@ -126,3 +126,12 @@ git diff --check
 浏览器验收覆盖桌面 1440 像素、手机 390 像素、窄屏 320 像素，以及申请、显式确认、管理、偏好、通用版和退订。首页新闻卡片明确标记为结构预览。真实 AI 采集质量、支付宝沙箱与生产收款、Resend 实际收件箱送达和公网部署需要相应账号与基础设施后继续验收。
 
 本地测试结果与执行记录见 `docs/implementation.md`。共享开发规则见仓库根目录 `AGENTS.md`。
+
+## 个人主页与登录
+
+- `/manage` 是读者的个人主页，显示订阅状态与下一封发送时间、所关注内容、推送板块编辑、续费和退订。`/login` 通过邮箱获取登录链接，无需密码。
+- 登录链接来自邮件。每封简报、确认邮件和续费提醒中的“管理”链接同样可以进入。登录状态保存在读者自己的浏览器中，退出登录会清除。
+- `POST /api/login` 对任何邮箱返回相同提示。只有已确认且仍订阅的账户会收到邮件，链接一小时内有效。该邮件走同一个 outbox，需要 worker 运行。
+- `GET /api/feed` 读取已冻结的快照。试读、付费或宽限期内的读者可看近 14 期，其余读者只能看最新一期。
+- 邮件中所选主题全部展开并排在最前，其余放入“其他值得一扫”。未选择主题时使用通用版三条必知。
+- worker 先处理确认、登录和续费类邮件，再处理批量简报。

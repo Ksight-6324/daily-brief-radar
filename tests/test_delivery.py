@@ -271,3 +271,11 @@ class DeliveryTest(StoreCase):
         self.assertEqual(self.delivery.enqueue_login("second@example.com", NOW), 1)
         self.assertEqual(self.delivery.run_once(NOW), "success")
         self.assertEqual(ProviderHandler.calls[0][2]["to"], ["second@example.com"])
+
+    def test_weekly_plan_skips_the_seven_day_notice_but_keeps_later_ones(self):
+        account = self.subscriber()
+        order = self.store.create_order(account["id"], "weekly", NOW)
+        self.store.confirm_payment(order["order_token"], "weekly-1", 300, NOW)
+        self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(minutes=1)), 0)
+        self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(days=4)), 1)
+        self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(days=6)), 1)
