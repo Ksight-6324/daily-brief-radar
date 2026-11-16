@@ -10,9 +10,9 @@ from tests.support import NOW, StoreCase
 
 
 class StoreTest(StoreCase):
-    def test_all_fifteen_topics_can_be_selected_and_cleared(self):
+    def test_all_sixteen_topics_can_be_selected_and_cleared(self):
         self.assertEqual(list(SECTIONS.values()), [
-            "股票经济", "石油黄金", "政治军事", "中外历史", "音乐演出", "设计美术", "专辑影视",
+            "股票经济", "石油黄金", "政治军事", "中外历史", "音乐演出", "设计美术", "时尚穿搭", "专辑影视",
             "人工智能", "自我提升", "物理化学", "生物科技", "心灵疗养", "就业机会", "体育健康", "电竞游戏",
         ])
         account = self.store.register("topics@example.com", list(SECTIONS), NOW)

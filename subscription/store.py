@@ -21,7 +21,7 @@ PLAN_LABELS = {"weekly": "周付", "monthly": "月付", "quarterly": "季付", "
 SECTIONS = {
     "markets": "股票经济", "commodities": "石油黄金", "politics_mil": "政治军事",
     "history": "中外历史", "live_music": "音乐演出", "design_art": "设计美术",
-    "album_film": "专辑影视", "ai": "人工智能", "growth": "自我提升",
+    "fashion": "时尚穿搭", "album_film": "专辑影视", "ai": "人工智能", "growth": "自我提升",
     "science_pc": "物理化学", "biotech": "生物科技", "mind": "心灵疗养",
     "jobs": "就业机会", "sports_health": "体育健康", "gaming": "电竞游戏",
 }

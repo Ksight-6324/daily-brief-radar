@@ -38,6 +38,30 @@ class PipelineTest(StoreCase):
         with self.assertRaises(ValueError):
             freeze_markdown(self.store, text, NOW, edition="evening")
 
+    def test_topic_rules_steer_growth_gaming_and_fashion(self):
+        from subscription.store import SECTIONS
+        items = [{"category": "历史" if key == "history" else label, "title": label,
+                  "url": "https://example.com/" + key} for key, label in SECTIONS.items()]
+        rules = {}
+
+        def pick(label, candidates, top_n, rule, *args):
+            rules[label] = rule
+            return f"官方|||{label}|||{candidates[0]['url']}|||主题|||事实|||影响"
+
+        summarizer = SimpleNamespace(
+            load_json=lambda _: {"items": items}, load_seen=lambda _: (set(), [], []),
+            filter_seen=lambda candidates, _: candidates, NO_ADVICE_RULE="",
+            summarize_one_pick=pick, save_seen=Mock(),
+        )
+        with patch.dict(sys.modules, {"summarize": summarizer}), patch("subscription.pipeline.Path.write_text"):
+            generate_markdown(NOW, edition="morning")
+        self.assertIn("自律", rules["自我提升"])
+        self.assertIn("自控力", rules["自我提升"])
+        self.assertIn("全球游戏", rules["电竞游戏"])
+        self.assertIn("电竞赛事", rules["电竞游戏"])
+        self.assertIn("潮流风格", rules["时尚穿搭"])
+        self.assertIn("色彩搭配", rules["时尚穿搭"])
+
     def test_snapshot_date_follows_beijing_after_utc_date_boundary(self):
         when = datetime(2026, 11, 15, 16, 5, tzinfo=timezone.utc)
         text = "DATE|||2026-11-16\nSLOT|||morning\nSECTION|||gaming\n官方|||比赛|||https://example.com/game|||赛事|||事实|||影响"

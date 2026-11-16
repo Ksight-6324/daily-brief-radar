@@ -75,6 +75,15 @@ def generate_markdown(now=None, edition=None):
             rule += "只陈述招聘、用工、薪资动态。招聘新闻须明确标注，禁止编造岗位与投递链接。"
         if key == "sports_health":
             rule += "只陈述赛事、运动和健康研究的事实，不提供个体诊断、用药或治疗建议。"
+        if key == "growth":
+            rule += ("优先选择自律与自我约束相关的内容：习惯养成、专注力、克服拖延、自控力与行动力，"
+                     "要有研究或实践依据。点评写出一个今天就能开始的具体做法。鸡汤、空洞励志、广告软文、购物清单不要选。")
+        if key == "gaming":
+            rule += ("覆盖全球游戏与电竞：新作发售与定档、重要版本更新、主机与平台动态，以及世界各地的电竞赛事结果与赛程。"
+                     "优先影响面大的作品和顶级赛事，写清楚游戏名、平台或赛事名、战队与结果。传闻须标明未经证实。")
+        if key == "fashion":
+            rule += ("覆盖全球时尚动态：时装周与品牌发布、流行趋势、不同的潮流风格。摘要说清这是什么风格或趋势，"
+                     "点评写出可参考的穿搭与色彩搭配思路（主色、辅色或点缀色）。促销折扣、购物清单、明星八卦不要选。")
         result = summarize.summarize_one_pick(category, candidates, 1, rule, seen_titles)
         if result.strip():
             sections[key] = result

@@ -1,5 +1,5 @@
 """
-抓取 15 个板块的新闻候选（股票经济 / 石油黄金 / 政治军事 / 历史 / 音乐演出 / 设计美术 / 专辑影视 /
+抓取 16 个板块的新闻候选（股票经济 / 石油黄金 / 政治军事 / 历史 / 音乐演出 / 设计美术 / 时尚穿搭 / 专辑影视 /
 人工智能 / 自我提升 / 物理化学 / 生物科技 / 心灵疗养 / 就业机会 / 体育健康 / 电竞游戏）
 
 结构：大类（板块）-> { 子类名: { 来源名: RSS地址 } }
@@ -148,14 +148,19 @@ CATEGORY_SOURCES = {
                                   lang="en-US", gl="US", ceid="US:en"),
         },
     },
+    # 自我提升偏向自律与自我约束：习惯、专注、拖延、自控力与行动力，有研究或实践依据的方法
     "自我提升": {
-        "自我提升文章": {
-            "Big Think": "https://bigthink.com/feed/",
-            "Farnam Street": "https://fs.blog/feed/",
+        "自律与行动力": {
+            "James Clear": "https://jamesclear.com/feed",
+            "Nir and Far": "https://www.nirandfar.com/feed/",
+            "Cal Newport": "https://calnewport.com/feed/",
             "Zen Habits": "https://zenhabits.net/feed/",
             "Scott Young": "https://www.scotthyoung.com/blog/feed/",
-            "Cal Newport": "https://calnewport.com/feed/",
-            "Lifehacker": "https://lifehacker.com/feed/rss",
+            "Farnam Street": "https://fs.blog/feed/",
+            "Psychology Today": "https://www.psychologytoday.com/us/front/feed",
+            "自律与自控力": _gnews("自律 OR 自控力 OR 习惯养成 OR 拖延症 OR 行动力"),
+            "自控力研究": _gnews("self-discipline OR self-control OR willpower OR procrastination study",
+                                  lang="en-US", gl="US", ceid="US:en"),
         },
     },
     "物理化学": {
@@ -207,9 +212,41 @@ CATEGORY_SOURCES["体育健康"] = {
     "体育赛事": {"ESPN": "https://www.espn.com/espn/rss/news"},
     "健康动态": {"NHS England": "https://www.england.nhs.uk/feed/"},
 }
+# 电竞游戏：全球游戏更新（新作、版本更新、发售与定档）和世界各地的电竞赛事
 CATEGORY_SOURCES["电竞游戏"] = {
-    "游戏动态": {"Steam 官方新闻": "https://store.steampowered.com/feeds/news.xml"},
-    "电竞赛事": {"电竞赛事新闻": _gnews("电竞 OR 英雄联盟 赛事 OR CS2 赛事")},
+    "全球游戏更新": {
+        "IGN": "https://feeds.ign.com/ign/news",
+        "GameSpot": "https://www.gamespot.com/feeds/news/",
+        "Eurogamer": "https://www.eurogamer.net/feed",
+        "PC Gamer": "https://www.pcgamer.com/rss/",
+        "VGC": "https://www.videogameschronicle.com/feed/",
+        "Gematsu": "https://www.gematsu.com/feed",
+        "机核": "https://www.gcores.com/rss",
+        "国内游戏新闻": _gnews("游戏 更新 OR 版本 OR 新作 发售"),
+    },
+    "电竞赛事": {
+        "HLTV": "https://www.hltv.org/rss/news",
+        "Esports Insider": "https://esportsinsider.com/feed",
+        "Dexerto": "https://www.dexerto.com/esports/feed/",
+        "国际电竞赛事": _gnews("esports tournament OR championship OR major", lang="en-US", gl="US", ceid="US:en"),
+        "国内电竞赛事": _gnews("电竞 OR 英雄联盟 赛事 OR CS2 赛事"),
+    },
+}
+# 时尚穿搭：全球时尚动态、不同的潮流风格、穿搭与色彩搭配
+CATEGORY_SOURCES["时尚穿搭"] = {
+    "全球时尚动态": {
+        "Vogue": "https://www.vogue.com/feed/rss",
+        "WWD": "https://wwd.com/feed/",
+        "Fashionista": "https://fashionista.com/.rss/full/",
+        "Harper's Bazaar": "https://www.harpersbazaar.com/rss/fashion.xml/",
+        "国际时尚趋势": _gnews("fashion trend OR runway OR color trend", lang="en-US", gl="US", ceid="US:en"),
+    },
+    "潮流风格与穿搭配色": {
+        "Highsnobiety": "https://www.highsnobiety.com/feed/",
+        "Who What Wear": "https://www.whowhatwear.com/rss",
+        "Elle": "https://www.elle.com/rss/fashion.xml/",
+        "穿搭与流行色": _gnews("流行色 OR 穿搭 配色 OR 时装周"),
+    },
 }
 
 # 时效过滤：只保留最近多少小时内发布的新闻（简报的定位是"这半天内值得关注的事"）。
@@ -218,7 +255,7 @@ DEFAULT_MAX_AGE_HOURS = 48
 MAX_AGE_HOURS = {
     "石油黄金": 72, "政治军事": 72, "历史": 240, "音乐演出": 72, "设计美术": 72, "专辑影视": 72,
     "自我提升": 504, "物理化学": 96, "生物科技": 72, "心灵疗养": 168, "就业机会": 168,
-    "体育健康": 72, "电竞游戏": 72,
+    "体育健康": 72, "电竞游戏": 72, "时尚穿搭": 96,
 }
 
 REQUEST_TIMEOUT = 20
