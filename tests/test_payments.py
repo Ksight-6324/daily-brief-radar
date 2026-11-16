@@ -100,6 +100,7 @@ class PaymentTest(StoreCase):
                     response = client.post("/api/orders", headers=headers, json={"plan": "weekly"})
             self.assertEqual(response.status_code, 200, response.text)
             business = json.loads(gateway.call_args.kwargs["data"]["biz_content"])
+            self.assertEqual(response.json()["expires_at"], "2026-11-15T11:30:00+00:00")
             self.assertEqual(business.get("time_expire"), "2026-11-15 19:30:00")
             self.assertNotIn("timeout_express", business)
             with self.assertRaises(ValueError):

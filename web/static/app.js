@@ -417,8 +417,12 @@ document.addEventListener("click", async (event) => {
     if (qrObjectUrl) URL.revokeObjectURL(qrObjectUrl);
     qrObjectUrl = URL.createObjectURL(await qr.blob());
     byId("payment-qr").src = qrObjectUrl;
+    const deadline = new Date(order.expires_at);
+    const deadlineLabel = deadline.toLocaleTimeString("zh-CN", {
+      timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit",
+    });
     byId("payment-amount").textContent =
-      `订单金额 ¥${(order.amount / 100).toFixed(2)}，收款码 30 分钟内有效。`;
+      `订单金额 ¥${(order.amount / 100).toFixed(2)}，收款码有效至北京时间 ${deadlineLabel}。`;
     byId("payment-link").href = order.payment_url;
     byId("payment-panel").hidden = false;
     byId("payment-status").textContent =
@@ -426,7 +430,7 @@ document.addEventListener("click", async (event) => {
     feedback("management-feedback", "订单已创建。");
     byId("payment-panel").scrollIntoView({ block: "center" });
     clearTimeout(pollingTimer);
-    pollPayment(order.order_token, Date.now() + 30 * 60 * 1000);
+    pollPayment(order.order_token, deadline.getTime());
   } catch (error) {
     feedback("management-feedback", error.message, true);
   } finally {

@@ -2,7 +2,7 @@ import hashlib
 import io
 import json
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -204,7 +204,9 @@ def create_app(store=None, delivery=None, payment=None):
             payment_url = order["qr_code"] or payment.precreate(order)
         except (requests.RequestException, ValueError) as error:
             raise HTTPException(502, "支付宝暂时无法创建收款码，请稍后重试") from error
-        return {"order_token": order["order_token"], "amount": order["amount"], "payment_url": payment_url}
+        expires_at = datetime.fromisoformat(order["created_at"]) + timedelta(minutes=30)
+        return {"order_token": order["order_token"], "amount": order["amount"], "payment_url": payment_url,
+                "expires_at": stamp(expires_at)}
 
     def owned_order(order_token, request):
         row = account(request)
