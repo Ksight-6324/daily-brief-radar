@@ -75,7 +75,7 @@ BEGIN SELECT RAISE(ABORT, 'published issues are immutable'); END;
 CREATE TABLE IF NOT EXISTS delivery_log (
     id TEXT PRIMARY KEY,
     subscriber_id TEXT NOT NULL REFERENCES subscribers(id),
-    task_type TEXT NOT NULL CHECK (task_type IN ('daily_brief','renewal_reminder','confirmation')),
+    task_type TEXT NOT NULL CHECK (task_type IN ('daily_brief','renewal_reminder','confirmation','login_link')),
     business_key TEXT NOT NULL,
     issue_id TEXT REFERENCES daily_issue(id),
     status TEXT NOT NULL CHECK (status IN ('pending','sending','success','failed','skipped','needs_review')),
@@ -106,4 +106,4 @@ CREATE TABLE IF NOT EXISTS request_limits (
     window_start TEXT NOT NULL,
     count INTEGER NOT NULL
 );
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;

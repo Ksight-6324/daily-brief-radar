@@ -30,7 +30,7 @@ class MigrationTest(StoreCase):
     def test_migration_preserves_paid_expiry_snapshots_and_success_and_allows_weekly_renewal(self):
         store = Store(self.legacy_database())
         with store.connect() as conn:
-            self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 2)
+            self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 3)
             self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
             self.assertEqual(conn.execute("SELECT edition FROM daily_issue WHERE id='old-issue'").fetchone()[0], "legacy")
             statuses = dict(conn.execute("SELECT id,status FROM delivery_log"))
@@ -54,5 +54,32 @@ class MigrationTest(StoreCase):
         with ThreadPoolExecutor(max_workers=2) as pool:
             list(pool.map(lambda _: Store(path), range(2)))
         with closing(sqlite3.connect(path)) as conn:
-            self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 2)
+            self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 3)
             self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+
+    def test_version_two_database_gains_login_link_task_and_keeps_every_delivery(self):
+        path = self.store.path.parent / "v2.db"
+        Store(path)
+        schema = Path(__file__).resolve().parents[1].joinpath("subscription", "schema.sql").read_text(encoding="utf-8")
+        old_check = schema.replace(",'login_link')", ")")
+        self.assertNotEqual(old_check, schema)
+        table = old_check[old_check.index("CREATE TABLE IF NOT EXISTS delivery_log"):old_check.index("CREATE INDEX IF NOT EXISTS delivery_due")]
+        with closing(sqlite3.connect(path)) as conn, conn:
+            conn.execute("PRAGMA foreign_keys=OFF")
+            conn.execute("DROP TABLE delivery_log")
+            conn.executescript(table)
+            conn.execute("INSERT INTO subscribers(id,email,status,token_nonce,confirmation_expires_at,created_at) VALUES('r','v2@example.com','active','n',?,?)", (NOW.isoformat(),) * 2)
+            conn.execute("""INSERT INTO delivery_log(id,subscriber_id,task_type,business_key,status,payload,idempotency_key,created_at,next_attempt_at)
+                            VALUES('kept','r','confirmation','n','success','{}','brief/kept',?,?)""", (NOW.isoformat(),) * 2)
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("""INSERT INTO delivery_log(id,subscriber_id,task_type,business_key,status,payload,idempotency_key,created_at,next_attempt_at)
+                                VALUES('x','r','login_link','k','pending','{}','brief/x',?,?)""", (NOW.isoformat(),) * 2)
+            conn.execute("PRAGMA user_version=2")
+        store = Store(path)
+        with store.connect() as conn:
+            self.assertEqual(conn.execute("PRAGMA user_version").fetchone()[0], 3)
+            self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+            self.assertEqual(conn.execute("SELECT status FROM delivery_log WHERE id='kept'").fetchone()[0], "success")
+            self.assertEqual(conn.execute("SELECT count(*) FROM pragma_index_list('delivery_log') WHERE name='delivery_due'").fetchone()[0], 1)
+            conn.execute("""INSERT INTO delivery_log(id,subscriber_id,task_type,business_key,status,payload,idempotency_key,created_at,next_attempt_at)
+                            VALUES('login','r','login_link','k','pending','{}','brief/login',?,?)""", (NOW.isoformat(),) * 2)

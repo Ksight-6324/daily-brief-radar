@@ -44,6 +44,13 @@ def stamp(value):
     return value.astimezone(timezone.utc).isoformat(timespec="seconds")
 
 
+def normalize_email(value):
+    email = value.strip().lower()
+    if len(email) > 254 or not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+", email):
+        raise ValueError("请输入有效邮箱")
+    return email
+
+
 def preferences(value):
     if not isinstance(value, list) or any(key not in SECTIONS for key in value):
         raise ValueError("请选择有效板块")
@@ -132,11 +139,17 @@ class Store:
             row = conn.execute("SELECT * FROM daily_issue WHERE issue_date=? AND edition=?", (issue_date, edition)).fetchone()
             return dict(row) if row else None
 
+    def recent_issues(self, limit):
+        """Newest frozen morning and evening issues first. Legacy snapshots are not shown."""
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT issue_date,edition,sections FROM daily_issue
+                WHERE edition IN ('morning','evening')
+                ORDER BY issue_date DESC, CASE edition WHEN 'evening' THEN 1 ELSE 0 END DESC LIMIT ?""", (limit,)).fetchall()
+            return [dict(row) for row in rows]
+
     def register(self, email, selected, now=None):
         now = now or utcnow()
-        email = email.strip().lower()
-        if len(email) > 254 or not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+", email):
-            raise ValueError("请输入有效邮箱")
+        email = normalize_email(email)
         selected = preferences(selected)
         with self.transaction() as conn:
             row = conn.execute("SELECT * FROM subscribers WHERE email=?", (email,)).fetchone()

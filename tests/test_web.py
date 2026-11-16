@@ -91,7 +91,7 @@ class WebTest(StoreCase):
         self.assertEqual(response.status_code, 400)
 
     def test_pages_include_security_headers_and_real_forms(self):
-        for route in ("/", "/confirm", "/manage", "/unsubscribe"):
+        for route in ("/", "/confirm", "/manage", "/unsubscribe", "/login"):
             with self.subTest(route=route):
                 response = self.client.get(route)
                 self.assertEqual(response.status_code, 200)
@@ -108,3 +108,67 @@ class WebTest(StoreCase):
         self.assertEqual(first.json(), second.json())
         self.assertEqual(third.status_code, 200)
         self.assertEqual(fourth.status_code, 429)
+
+    def test_login_request_never_reveals_whether_an_address_is_subscribed(self):
+        account = self.subscriber("home@example.com")
+        known = self.client.post("/api/login", json={"email": "Home@Example.com"})
+        unknown = self.client.post("/api/login", json={"email": "stranger@example.com"})
+        self.assertEqual(known.status_code, 200)
+        self.assertEqual(known.json(), unknown.json())
+        with self.store.connect() as conn:
+            rows = conn.execute("SELECT task_type,subscriber_id FROM delivery_log").fetchall()
+        self.assertEqual([(row["task_type"], row["subscriber_id"]) for row in rows], [("login_link", account["id"])])
+        self.assertEqual(self.client.post("/api/login", json={"email": "not-an-email"}).status_code, 400)
+
+    def test_login_requests_are_rate_limited_per_address(self):
+        self.subscriber("busy@example.com")
+        codes = [self.client.post("/api/login", json={"email": "busy@example.com"}).status_code for _ in range(4)]
+        self.assertEqual(codes, [200, 200, 200, 429])
+
+    def issues(self):
+        story = lambda title, key: f"来源|||{title}|||https://example.com/{key}|||标签|||摘要{title}|||重要{title}"
+        self.store.freeze_issue("2026-11-14", {"ai": story("昨日AI", "a"), "jobs": story("昨日就业", "j")}, NOW, edition="evening")
+        self.store.freeze_issue("2026-11-15", {"ai": story("今日AI", "a2"), "markets": story("今日市场", "m"),
+                                               "gaming": "javascript 伪链接|||游戏<b>|||javascript:alert(1)|||标签|||摘要|||重要"}, NOW, edition="morning")
+
+    def test_feed_requires_login_and_lists_followed_topics_first(self):
+        self.issues()
+        self.assertEqual(self.client.get("/api/feed").status_code, 401)
+        account = self.subscriber()
+        self.client.post("/api/preferences", headers=self.headers(account), json={"preferences": ["ai", "gaming"]})
+        followed = self.client.get("/api/feed", headers=self.headers(account)).json()
+        self.assertFalse(followed["limited"])
+        self.assertFalse(followed["general"])
+        self.assertEqual([(issue["date"], issue["edition"]) for issue in followed["issues"]],
+                         [("2026-11-15", "morning"), ("2026-11-14", "evening")])
+        self.assertEqual([story["topic"] for story in followed["issues"][0]["stories"]], ["ai", "gaming"])
+        self.assertEqual([story["topic"] for story in followed["issues"][1]["stories"]], ["ai"])
+        self.assertEqual(followed["issues"][0]["stories"][0]["title"], "今日AI")
+        self.assertEqual(followed["issues"][0]["stories"][1]["url"], "")
+        everything = self.client.get("/api/feed", params={"scope": "all"}, headers=self.headers(account)).json()
+        self.assertEqual([story["topic"] for story in everything["issues"][0]["stories"]], ["ai", "gaming", "markets"])
+        self.assertTrue(everything["issues"][0]["stories"][2]["followed"] is False)
+        self.assertEqual(self.client.get("/api/feed", params={"scope": "x"}, headers=self.headers(account)).status_code, 400)
+
+    def test_feed_changes_immediately_after_the_reader_edits_topics(self):
+        self.issues()
+        account = self.subscriber()
+        self.client.post("/api/preferences", headers=self.headers(account), json={"preferences": ["jobs"]})
+        feed = self.client.get("/api/feed", headers=self.headers(account)).json()
+        self.assertEqual([[story["topic"] for story in issue["stories"]] for issue in feed["issues"]], [["jobs"]])
+        self.client.post("/api/preferences", headers=self.headers(account), json={"preferences": []})
+        general = self.client.get("/api/feed", headers=self.headers(account)).json()
+        self.assertTrue(general["general"])
+        self.assertEqual(len(general["issues"][0]["stories"]), 3)
+
+    def test_feed_is_a_one_issue_preview_when_the_trial_is_used_up_and_hidden_before_confirmation(self):
+        self.issues()
+        account = self.subscriber()
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET trial_remaining=0 WHERE id=?", (account["id"],))
+        feed = self.client.get("/api/feed", headers=self.headers(account)).json()
+        self.assertTrue(feed["limited"])
+        self.assertEqual(len(feed["issues"]), 1)
+        self.assertEqual(self.client.get("/api/account", headers=self.headers(account)).json()["delivery_mode"], None)
+        pending = self.store.register("pending@example.com", [], NOW)
+        self.assertEqual(self.client.get("/api/feed", headers=self.headers(pending)).status_code, 403)

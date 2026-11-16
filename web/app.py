@@ -14,9 +14,10 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictBool
 
-from subscription.delivery import Delivery
+from subscription.delivery import ACCOUNT_QUERY, Delivery, eligibility
+from subscription.feed import build_feed
 from subscription.payments import Alipay
-from subscription.store import PLAN_LABELS, PLANS, SECTIONS, Store, stamp, utcnow
+from subscription.store import PLAN_LABELS, PLANS, SECTIONS, Store, normalize_email, stamp, utcnow
 
 
 STATIC = Path(__file__).with_name("static")
@@ -26,6 +27,10 @@ class Signup(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     preferences: list[str] = Field(default_factory=list, max_length=len(SECTIONS))
     consent: StrictBool
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
 
 
 class Confirmation(BaseModel):
@@ -101,18 +106,48 @@ def create_app(store=None, delivery=None, payment=None):
             delivery.enqueue_confirmation(registered)
         return {"message": "如果该邮箱可以订阅，我们会发送确认邮件。请检查收件箱和垃圾邮件文件夹。"}
 
+    @app.post("/api/login")
+    def login(values: LoginRequest, request: Request):
+        email = normalize_email(values.email)
+        address = request.client.host if request.client else "unknown"
+        email_hash = hashlib.sha256(email.encode()).hexdigest()
+        ip_hash = hashlib.sha256(address.encode()).hexdigest()
+        if not store.allow_request("login-email:" + email_hash, 3) or not store.allow_request("login-ip:" + ip_hash, 20):
+            raise HTTPException(429, "申请较频繁，请一小时后重试")
+        delivery.enqueue_login(email)
+        return {"message": "如果该邮箱已订阅，登录链接会发送到收件箱。请检查垃圾邮件文件夹，一小时内有效。"}
+
     @app.post("/api/confirm")
     def confirm(values: Confirmation):
         subscriber_id = store.confirm(values.token)
         return {"manage_token": store.token(store.subscriber(subscriber_id))}
 
+    def delivery_mode(subscriber_id):
+        with store.connect() as conn:
+            joined = conn.execute(ACCOUNT_QUERY + " WHERE s.id=?", (subscriber_id,)).fetchone()
+        return eligibility(joined, utcnow()) if joined else None
+
+    @app.get("/api/feed")
+    def read_feed(request: Request, scope: str = "followed"):
+        row = account(request)
+        if scope not in ("followed", "all"):
+            raise HTTPException(400, "请选择有效范围")
+        if not row["confirmed_at"]:
+            raise HTTPException(403, "请先确认邮箱")
+        # Readers who still receive briefs browse the last week. Others see the latest issue as a preview.
+        full = delivery_mode(row["id"]) is not None
+        preferences = json.loads(row["preferences"])
+        return {"scope": scope, "general": not preferences, "limited": not full,
+                "issues": build_feed(store.recent_issues(14 if full else 1), preferences, scope)}
+
     @app.get("/api/account")
     def read_account(request: Request):
         row = account(request)
         sub = store.subscription(row["id"])
+        mode = delivery_mode(row["id"])
         return {"email": row["email"], "status": row["status"], "preferences": json.loads(row["preferences"]),
                 "trial_remaining": row["trial_remaining"], "confirmed": bool(row["confirmed_at"]),
-                "expires_at": sub["expires_at"] if sub else None,
+                "expires_at": sub["expires_at"] if sub else None, "delivery_mode": mode,
                 "payment_configured": bool(payment.app_id and payment.seller_id and payment.private_key and payment.public_key)}
 
     @app.post("/api/preferences")
@@ -194,6 +229,7 @@ def create_app(store=None, delivery=None, payment=None):
     @app.get("/confirm")
     @app.get("/manage")
     @app.get("/unsubscribe")
+    @app.get("/login")
     def page():
         return FileResponse(STATIC / "index.html")
 

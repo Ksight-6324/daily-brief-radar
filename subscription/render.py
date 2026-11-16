@@ -78,10 +78,10 @@ def render_issue(issue_date, sections, selected, base_url, token, grace=False, e
     return html, "\n\n".join(text_parts)
 
 
-def render_notice(title, body, base_url, token):
+def render_notice(title, body, base_url, token, action="管理订阅或续费"):
     manage_url, unsubscribe_url = links(base_url, token)
     html = (f'<html lang="zh"><body style="font-family:Arial,sans-serif;line-height:1.8;color:#233d35">'
             f'<h1>{escape(title)}</h1><p>{escape(body)}</p>'
-            f'<p><a href="{escape(manage_url, quote=True)}">管理订阅或续费</a></p>'
+            f'<p><a href="{escape(manage_url, quote=True)}">{escape(action)}</a></p>'
             f'<p><a href="{escape(unsubscribe_url, quote=True)}">退订</a></p></body></html>')
-    return html, f"{title}\n{body}\n管理订阅或续费 {manage_url}\n退订 {unsubscribe_url}"
+    return html, f"{title}\n{body}\n{action} {manage_url}\n退订 {unsubscribe_url}"

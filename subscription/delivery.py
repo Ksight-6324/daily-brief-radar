@@ -85,6 +85,18 @@ class Delivery:
             payload = self.payload(row, "请确认你的简报订阅", html, text)
             return self.enqueue(conn, row, "confirmation", row["token_nonce"], payload, now)
 
+    def enqueue_login(self, email, now=None):
+        """Email a personal-home link to a confirmed subscriber. Unknown or stopped addresses queue nothing."""
+        now = now or utcnow()
+        with self.store.transaction() as conn:
+            row = conn.execute("SELECT * FROM subscribers WHERE email=?", (email,)).fetchone()
+            if row is None or row["status"] not in ("active", "expired") or not row["confirmed_at"] or row["suppressed_at"]:
+                return 0
+            body = "点击下面的链接进入你的个人主页，查看关注内容、调整板块或续费。如果不是你本人申请，请忽略此邮件。"
+            html, text = render_notice("进入你的简报主页", body, self.base_url, self.store.token(row), action="进入我的主页")
+            payload = self.payload(row, "你的 Daily Brief Radar 登录链接", html, text)
+            return self.enqueue(conn, row, "login_link", uuid4().hex, payload, now)
+
     def enqueue_issue(self, issue_id, now=None):
         now = now or utcnow()
         count = 0
@@ -152,7 +164,7 @@ class Delivery:
         with self.store.transaction() as conn:
             task = conn.execute("""SELECT * FROM delivery_log WHERE
                 (status IN ('pending','failed') AND next_attempt_at<=? AND attempts<6)
-                OR (status='sending' AND lease_until<=?) ORDER BY created_at,id LIMIT 1""", (stamp(now), stamp(now))).fetchone()
+                OR (status='sending' AND lease_until<=?) ORDER BY (task_type='daily_brief'),created_at,id LIMIT 1""", (stamp(now), stamp(now))).fetchone()
             if task is None:
                 return None
             first = task["first_attempt_at"]
@@ -171,6 +183,10 @@ class Delivery:
             allowed = row and row["status"] != "unsubscribed" and not row["suppressed_at"]
             if task["task_type"] == "daily_brief":
                 allowed = allowed and eligibility(row, now) is not None
+            elif task["task_type"] == "login_link":
+                # A login link is only useful right after it was requested.
+                allowed = (allowed and row["status"] in ("active", "expired") and row["confirmed_at"]
+                           and task["created_at"] >= stamp(now - timedelta(hours=1)))
             elif task["task_type"] == "confirmation":
                 # Re-subscription confirmations may be sent to an explicitly unsubscribed account.
                 allowed = row and not row["suppressed_at"] and row["token_nonce"] == task["business_key"] and row["confirmation_expires_at"] >= stamp(now)

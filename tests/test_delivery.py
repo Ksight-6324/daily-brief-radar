@@ -239,3 +239,35 @@ class DeliveryTest(StoreCase):
         self.assertNotIn("<script>", html)
         self.assertNotIn('href="javascript:', html)
         self.assertIn("&lt;img", html)
+
+    def test_login_link_is_sent_only_to_confirmed_active_readers_and_expires_after_an_hour(self):
+        account = self.subscriber("login@example.com")
+        self.assertEqual(self.delivery.enqueue_login("nobody@example.com", NOW), 0)
+        pending = self.store.register("pending@example.com", [], NOW)
+        self.assertEqual(self.delivery.enqueue_login("pending@example.com", NOW), 0)
+        self.assertIsNotNone(pending)
+        self.assertEqual(self.delivery.enqueue_login("login@example.com", NOW), 1)
+        self.assertEqual(self.delivery.run_once(NOW), "success")
+        path, _, body = ProviderHandler.calls[0]
+        self.assertEqual(body["to"], ["login@example.com"])
+        self.assertIn("/manage#" + account["manage_token"], body["html"])
+        self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 3)
+        self.assertEqual(self.delivery.enqueue_login("login@example.com", NOW), 1)
+        self.assertEqual(self.delivery.run_once(NOW + timedelta(hours=2)), "skipped")
+        self.assertEqual(len(ProviderHandler.calls), 1)
+
+    def test_login_link_is_not_sent_after_unsubscribe(self):
+        account = self.subscriber("stopped@example.com")
+        self.assertEqual(self.delivery.enqueue_login("stopped@example.com", NOW), 1)
+        self.store.unsubscribe(account["manage_token"], NOW)
+        self.assertEqual(self.delivery.run_once(NOW), "skipped")
+        self.assertEqual(ProviderHandler.calls, [])
+        self.assertEqual(self.delivery.enqueue_login("stopped@example.com", NOW), 0)
+
+    def test_transactional_mail_is_sent_before_a_queued_bulk_issue(self):
+        self.subscriber("first@example.com")
+        self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 1)
+        self.subscriber("second@example.com")
+        self.assertEqual(self.delivery.enqueue_login("second@example.com", NOW), 1)
+        self.assertEqual(self.delivery.run_once(NOW), "success")
+        self.assertEqual(ProviderHandler.calls[0][2]["to"], ["second@example.com"])

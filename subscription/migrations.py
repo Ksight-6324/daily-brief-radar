@@ -6,6 +6,7 @@ from pathlib import Path
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 MIGRATION_PATH = Path(__file__).with_name("migration-v2.sql")
+MIGRATION_V3_PATH = Path(__file__).with_name("migration-v3.sql")
 
 
 def execute_script(conn, script):
@@ -26,10 +27,12 @@ def initialize(conn):
     try:
         conn.execute("BEGIN IMMEDIATE")
         version = conn.execute("PRAGMA user_version").fetchone()[0]
-        if version > 2:
+        if version > 3:
             raise ValueError("数据库版本高于当前程序支持版本")
         if version == 1:
             execute_script(conn, MIGRATION_PATH.read_text(encoding="utf-8"))
+        if version in (1, 2):
+            execute_script(conn, MIGRATION_V3_PATH.read_text(encoding="utf-8"))
         execute_script(conn, SCHEMA_PATH.read_text(encoding="utf-8"))
         if conn.execute("PRAGMA foreign_key_check").fetchone():
             raise ValueError("数据库外键校验失败")
