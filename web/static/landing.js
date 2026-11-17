@@ -221,9 +221,31 @@
       big.classList.add("will-rise");
       observer.observe(big);
     }
-    for (const small of $$(".page .page-small, .page .page-no, .page-topics, #landing section > .page-small", landing)) {
+    for (const small of $$(".page .page-small, .page .page-no, .page-topics, .finale-cta, #landing section > .page-small", landing)) {
       small.classList.add("fade-late", "will-fade");
       observer.observe(small);
+    }
+
+    // The twelve-hour page: the two halves of the day fill in, and the number counts up to 12.
+    const twelveBar = $(".twelve-bar", landing);
+    if (twelveBar) {
+      twelveBar.classList.add("will-fill");
+      observer.observe(twelveBar);
+    }
+    const twelve = $(".twelve-num b", landing);
+    if (twelve) {
+      twelve.textContent = "0";
+      new IntersectionObserver((entries, counter) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        counter.disconnect();
+        const started = performance.now();
+        const tick = (now) => {
+          const t = clamp((now - started) / 1400);
+          twelve.textContent = String(Math.round(12 * (1 - (1 - t) ** 3)));
+          if (t < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }, { threshold: 0.5 }).observe(twelve);
     }
   }
 
