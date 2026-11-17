@@ -33,6 +33,7 @@ Copy-Item .env.example .env
 | `ALIPAY_PRIVATE_KEY` | 应用 RSA 私钥 PEM，换行可以写为字面量 `\n` |
 | `ALIPAY_PUBLIC_KEY` | 支付宝 RSA 公钥 PEM |
 | `ALIPAY_SANDBOX` | `1` 使用沙箱网关，`0` 使用生产网关 |
+| `BRIEF_FREE_ACCESS` | `1` 表示收款尚未开通：已确认读者免费收到全部简报，不扣试读，不发续费提醒。开通支付宝收款前删除，并改写服务条款第 3 节的免费期说明 |
 | `CONTACT_EMAIL` | 隐私政策与服务条款页公布的联系邮箱，用于接收查看、副本、删除和退款请求 |
 | `OPERATOR_NAME` | 隐私政策与服务条款页显示的运营者名称，可留空 |
 

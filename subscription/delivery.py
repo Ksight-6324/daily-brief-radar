@@ -29,9 +29,16 @@ class ResendClient:
         return email_id
 
 
+def free_access():
+    """Before payments open, confirmed readers receive every issue without spending trial issues."""
+    return os.environ.get("BRIEF_FREE_ACCESS") == "1"
+
+
 def eligibility(row, now):
     if row["status"] != "active" or not row["confirmed_at"] or row["suppressed_at"]:
         return None
+    if free_access():
+        return "free"
     if row["expires_at"]:
         expires = datetime.fromisoformat(row["expires_at"])
         if expires > now:
@@ -123,6 +130,9 @@ class Delivery:
 
     def enqueue_reminders(self, now=None):
         now = now or utcnow()
+        if free_access():
+            # Nobody can pay yet, so trial-end and expiry notices would only ask for something impossible.
+            return 0
         count = 0
         with self.store.transaction() as conn:
             for row in conn.execute(ACCOUNT_QUERY).fetchall():
@@ -194,7 +204,7 @@ class Delivery:
                 allowed = row and not row["suppressed_at"] and row["token_nonce"] == task["business_key"] and row["confirmation_expires_at"] >= stamp(now)
             else:
                 cycle = task["business_key"].rsplit("/", 1)[0]
-                allowed = allowed and (row["expires_at"] or "trial") == cycle
+                allowed = allowed and not free_access() and (row["expires_at"] or "trial") == cycle
             if not allowed:
                 conn.execute("UPDATE delivery_log SET status='skipped',error_message='recipient no longer eligible',lease_until=NULL WHERE id=?", (task["id"],))
                 return "skipped"

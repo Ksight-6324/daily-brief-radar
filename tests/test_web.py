@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
@@ -205,6 +206,18 @@ class WebTest(StoreCase):
         self.assertEqual([story["topic"] for story in everything["issues"][0]["stories"]], ["ai", "gaming", "markets"])
         self.assertTrue(everything["issues"][0]["stories"][2]["followed"] is False)
         self.assertEqual(self.client.get("/api/feed", params={"scope": "x"}, headers=self.headers(account)).status_code, 400)
+
+    def test_free_access_shows_free_mode_and_full_feed_after_trial(self):
+        self.issues()
+        account = self.subscriber()
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET trial_remaining=0 WHERE id=?", (account["id"],))
+        self.assertTrue(self.client.get("/api/feed", headers=self.headers(account)).json()["limited"])
+        with patch.dict("os.environ", {"BRIEF_FREE_ACCESS": "1"}):
+            self.assertEqual(self.client.get("/api/account", headers=self.headers(account)).json()["delivery_mode"], "free")
+            feed = self.client.get("/api/feed?scope=all", headers=self.headers(account)).json()
+        self.assertFalse(feed["limited"])
+        self.assertEqual(len(feed["issues"]), 2)
 
     def test_feed_changes_immediately_after_the_reader_edits_topics(self):
         self.issues()

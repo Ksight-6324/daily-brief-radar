@@ -177,6 +177,8 @@ function describeAccount(account) {
     return `订阅有效期至 ${formatExpiry(account.expires_at)}（北京时间）。下一封：${next}。`;
   if (account.delivery_mode === "grace")
     return `订阅已于 ${formatExpiry(account.expires_at)} 到期，三天宽限期内仍会收到简报，请尽快续费。下一封：${next}。`;
+  if (account.delivery_mode === "free")
+    return `收款开通前免费阅读，每天两封照常送达，不消耗试读次数。下一封：${next}。`;
   if (account.delivery_mode === "trial")
     return `免费试读还剩 ${account.trial_remaining} 封。下一封：${next}。`;
   if (account.expires_at) return "订阅已暂停，完成续费后恢复每日两封。";

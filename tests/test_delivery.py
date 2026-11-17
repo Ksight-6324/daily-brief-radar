@@ -229,6 +229,41 @@ class DeliveryTest(StoreCase):
         self.assertEqual(self.delivery.enqueue_issue(issue, when), 0)
         self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 0)
 
+    def test_free_access_sends_every_issue_without_spending_trial(self):
+        account = self.subscriber()
+        stopped = self.subscriber("stopped@example.com")
+        self.store.unsubscribe(stopped["manage_token"], NOW)
+        self.store.register("pending@example.com", [], NOW)
+        with patch.dict("os.environ", {"BRIEF_FREE_ACCESS": "1"}):
+            for index in range(4):
+                when = NOW + timedelta(days=index)
+                issue = self.store.freeze_issue(when.date().isoformat(), SECTIONS, when)
+                self.assertEqual(self.delivery.enqueue_issue(issue, when), 1)
+                self.assertEqual(self.delivery.run_once(when), "success")
+        self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 3)
+        self.assertEqual({row["subscriber_id"] for row in self.rows()}, {account["id"]})
+
+    def test_free_access_restores_exhausted_readers_and_trial_rules_return_when_switched_off(self):
+        account = self.subscriber()
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET trial_remaining=0 WHERE id=?", (account["id"],))
+        self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 0)
+        with patch.dict("os.environ", {"BRIEF_FREE_ACCESS": "1"}):
+            self.assertEqual(self.delivery.enqueue_issue(self.issue_id, NOW), 1)
+        # A brief queued during the free period is not sent once the switch is removed and the trial is spent.
+        self.assertEqual(self.delivery.run_once(NOW), "skipped")
+        self.assertEqual(self.store.subscriber(account["id"])["trial_remaining"], 0)
+
+    def test_free_access_queues_no_reminders_and_skips_queued_ones(self):
+        account = self.subscriber()
+        with self.store.transaction() as conn:
+            conn.execute("UPDATE subscribers SET trial_remaining=1 WHERE id=?", (account["id"],))
+        self.assertEqual(self.delivery.enqueue_reminders(NOW), 1)
+        with patch.dict("os.environ", {"BRIEF_FREE_ACCESS": "1"}):
+            self.assertEqual(self.delivery.enqueue_reminders(NOW + timedelta(days=1)), 0)
+            self.assertEqual(self.delivery.run_once(NOW), "skipped")
+        self.assertEqual(ProviderHandler.calls, [])
+
     def test_reminder_is_unique_per_expiry_cycle(self):
         account = self.subscriber()
         self.pay(account)

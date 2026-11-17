@@ -1,7 +1,9 @@
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from subscription.store import Store
 
@@ -11,6 +13,11 @@ NOW = datetime(2026, 11, 15, 11, tzinfo=timezone.utc)
 
 class StoreCase(unittest.TestCase):
     def setUp(self):
+        # Trial and reminder tests describe the paid rules, so never inherit the operator's free-access switch.
+        environment = patch.dict(os.environ)
+        environment.start()
+        self.addCleanup(environment.stop)
+        os.environ.pop("BRIEF_FREE_ACCESS", None)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.store = Store(Path(self.temp.name) / "brief.db")
