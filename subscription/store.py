@@ -28,6 +28,7 @@ SECTIONS = {
 BEIJING = ZoneInfo("Asia/Shanghai")
 EDITIONS = {"morning": (8, "早报"), "evening": (20, "晚报")}
 GRACE_DAYS = 3
+TIP_CHANNELS = {"alipay": "支付宝", "wechat": "微信", "other": "其他"}
 
 
 def utcnow():
@@ -49,6 +50,18 @@ def normalize_email(value):
     if len(email) > 254 or not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+", email):
         raise ValueError("请输入有效邮箱")
     return email
+
+
+def tip_name(value):
+    """A public nickname: printable, single line, at most 20 characters. Empty means anonymous."""
+    name = re.sub(r"\s+", " ", (value or "").strip())
+    if any(not character.isprintable() for character in name):
+        raise ValueError("昵称包含无法显示的字符")
+    if len(name) > 20:
+        raise ValueError("昵称最多 20 个字")
+    if "@" in name:
+        raise ValueError("昵称不能是邮箱地址")
+    return name
 
 
 def preferences(value):
@@ -332,3 +345,36 @@ class Store:
             else:
                 conn.execute("INSERT OR REPLACE INTO request_limits VALUES(?,?,1)", (bucket, stamp(now)))
             return True
+
+    def add_tip(self, name, amount, channel, tipped_on, now=None):
+        now = now or utcnow()
+        if not isinstance(amount, int) or amount <= 0:
+            raise ValueError("金额必须大于 0")
+        if channel not in TIP_CHANNELS:
+            raise ValueError("请选择支付宝、微信或其他")
+        tipped = date.fromisoformat(tipped_on).isoformat()
+        with self.transaction() as conn:
+            cursor = conn.execute("INSERT INTO tips(name,amount,channel,tipped_on,created_at) VALUES(?,?,?,?,?)",
+                                  (tip_name(name), amount, channel, tipped, stamp(now)))
+            return cursor.lastrowid
+
+    def remove_tips(self, tip_id=None, name=None):
+        """Delete one record, or every record under a nickname when its owner asks to leave the board."""
+        if (tip_id is None) == (name is None):
+            raise ValueError("请指定记录编号或昵称之一")
+        with self.transaction() as conn:
+            if tip_id is not None:
+                return conn.execute("DELETE FROM tips WHERE id=?", (tip_id,)).rowcount
+            return conn.execute("DELETE FROM tips WHERE name=? AND name<>''", (tip_name(name),)).rowcount
+
+    def tips(self):
+        with self.connect() as conn:
+            return conn.execute("SELECT * FROM tips ORDER BY tipped_on DESC, id DESC").fetchall()
+
+    def leaderboard(self, limit=50):
+        """Named tippers ranked by total. Anonymous tips are kept for bookkeeping but never listed."""
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT name, sum(amount) AS total, count(*) AS times, min(id) AS first
+                FROM tips WHERE name<>'' GROUP BY name ORDER BY total DESC, first ASC LIMIT ?""", (limit,)).fetchall()
+        return [{"rank": index + 1, "name": row["name"], "total": row["total"], "times": row["times"]}
+                for index, row in enumerate(rows)]

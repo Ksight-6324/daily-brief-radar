@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Daily Brief Radar 免费订阅，凭心意打赏。扫支付宝或微信收款码支持作者，留言昵称即可上大哥榜。"
+    />
+    <meta name="theme-color" content="#f4f1e8" />
+    <title>打赏与大哥榜 · Daily Brief Radar</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/contact.js" defer></script>
+    <script src="/static/support.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="wordmark" href="/" aria-label="Daily Brief Radar 首页"
+          ><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span
+          >DAILY BRIEF RADAR</a
+        >
+        <nav aria-label="主导航">
+          <a href="/#subscribe">免费订阅</a><a href="/manage">我的主页</a>
+        </nav>
+      </header>
+
+      <main id="main">
+        <article class="policy support">
+          <p class="panel-context">打赏</p>
+          <h1>简报免费读，觉得有用就请杯咖啡。</h1>
+          <p>
+            订阅不收费，也不限量。打赏完全自愿，金额随意，不打赏也一样每天收到两封简报。打赏不会带来额外内容或特权，只是支持这份简报继续做下去。
+          </p>
+
+          <div class="tip-codes">
+            <figure class="tip-code">
+              <img id="tip-alipay" src="/api/tip-codes/alipay" alt="支付宝收款码" width="240" height="240" />
+              <figcaption>支付宝扫一扫</figcaption>
+            </figure>
+            <figure class="tip-code">
+              <img id="tip-wechat" src="/api/tip-codes/wechat" alt="微信收款码" width="240" height="240" />
+              <figcaption>微信扫一扫</figcaption>
+            </figure>
+          </div>
+          <p id="tip-codes-missing" class="form-note" hidden>收款码即将上线，请稍后再来。</p>
+
+          <h2>想上大哥榜？</h2>
+          <ul>
+            <li>付款时在<strong>备注</strong>里写一个昵称，最多 20 个字。不要写邮箱、手机号或真实姓名。</li>
+            <li>我们对账后手动上榜，通常一两天内更新。同一昵称的打赏会累计。</li>
+            <li>没写备注的打赏照样心领，按匿名处理，不上榜。</li>
+            <li>想从榜上撤下、或付错了金额需要退回，请写信给我们并说明付款时间和金额。</li>
+          </ul>
+
+          <h2>大哥榜</h2>
+          <ol id="leaderboard" class="leaderboard" aria-live="polite">
+            <li class="leaderboard-empty">正在读取…</li>
+          </ol>
+
+          <h2>联系我们</h2>
+          <p>
+            <span id="contact-operator"></span
+            ><span id="contact-line">联系方式正在加载…</span>
+          </p>
+          <p class="account-actions"><a href="/">返回首页</a></p>
+        </article>
+      </main>
+
+      <footer class="site-footer">
+        <div class="foot-top">
+          <span class="foot-brand">DAILY BRIEF RADAR</span>
+          <div class="foot-links"><a href="/support">打赏</a><a href="/privacy">隐私政策</a><a href="/terms">服务条款</a></div>
+        </div>
+        <div class="foot-bottom">
+          <p>免费订阅 · 主动确认 · 随时退订</p>
+          <p>AI 辅助摘要，请以原始来源为准。</p>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

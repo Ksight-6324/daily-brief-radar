@@ -115,4 +115,16 @@ CREATE TABLE IF NOT EXISTS request_limits (
     window_start TEXT NOT NULL,
     count INTEGER NOT NULL
 );
+-- Voluntary tips paid to the operator's personal payment codes. They carry no reader link and
+-- change nothing about delivery. The operator records each one by hand from the payment app's bill.
+CREATE TABLE IF NOT EXISTS tips (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '' CHECK (length(name) <= 20),
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    channel TEXT NOT NULL CHECK (channel IN ('alipay','wechat','other')),
+    tipped_on TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS tips_name ON tips(name);
+
 PRAGMA user_version = 3;

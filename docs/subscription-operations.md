@@ -33,6 +33,7 @@ Copy-Item .env.example .env
 | `ALIPAY_PRIVATE_KEY` | 应用 RSA 私钥 PEM，换行可以写为字面量 `\n` |
 | `ALIPAY_PUBLIC_KEY` | 支付宝 RSA 公钥 PEM |
 | `ALIPAY_SANDBOX` | `1` 使用沙箱网关，`0` 使用生产网关 |
+| `BRIEF_TIP_CODE_DIR` | 打赏收款码图片目录，默认数据库旁的 `tip-codes/`（容器内 `/data/tip-codes`）。放 `alipay.png`、`wechat.png`（也接受 .jpg/.jpeg/.webp），不要提交到 Git |
 | `BRIEF_FREE_ACCESS` | `1` 表示收款尚未开通：已确认读者免费收到全部简报，不扣试读，不发续费提醒。开通支付宝收款前删除，并改写服务条款第 3 节的免费期说明 |
 | `CONTACT_EMAIL` | 隐私政策与服务条款页公布的联系邮箱，用于接收查看、副本、删除和退款请求 |
 | `OPERATOR_NAME` | 隐私政策与服务条款页显示的运营者名称，可留空 |
@@ -236,3 +237,29 @@ python -m subscription.cli backup --to /path/to/backups
 4. **条款变更通知。** 现稿承诺重大变化提前通知。
 
 条款变更时同步更新页面日期。与隐私政策一样，建议在公开运营前请律师审阅。
+
+## 打赏与大哥榜
+
+订阅免费，读者通过 `/support` 页的个人收款码自愿打赏。个人收款码没有回调，网站无法自动识别打赏，大哥榜靠人工对账录入。
+
+**上传收款码**（裁掉真实姓名和手机号，只留二维码）：
+
+```bash
+scp alipay.png wechat.png root@服务器:/tmp/
+ssh root@服务器 'cd /opt/brief/app && docker compose exec -T api mkdir -p /data/tip-codes && docker compose cp /tmp/alipay.png api:/data/tip-codes/alipay.png && docker compose cp /tmp/wechat.png api:/data/tip-codes/wechat.png'
+```
+
+图片在数据卷上，重新部署不会丢失。缺少某张图时，打赏页自动隐藏那一格；两张都没有时显示“收款码即将上线”。
+
+**录入打赏**：对照支付宝或微信账单，把备注里的昵称和金额录入。没有备注的也可以录入为匿名，只用于对账，不上榜。
+
+```bash
+docker compose exec -T api python -m subscription.cli tip add --name 老王 --amount 6.66 --channel wechat --date 2026-11-17
+docker compose exec -T api python -m subscription.cli tip list
+docker compose exec -T api python -m subscription.cli tip remove --id 3
+docker compose exec -T api python -m subscription.cli tip remove --name 老王
+```
+
+金额单位为元，最多两位小数；`--channel` 取 `alipay`、`wechat` 或 `other`，默认 `alipay`；`--date` 默认北京时间今天。看起来像真实姓名、手机号或不宜公开的备注，不要原样录入，可改为匿名。读者要求撤榜时按昵称删除全部记录。误付、重复付款和未成年人未经同意的打赏，在 30 天内申请可原路退回，退回后删除对应记录。
+
+`CONTACT_EMAIL` 需要配置，打赏页、隐私政策和服务条款都靠它告诉读者如何撤榜和申请退回。

@@ -14,7 +14,19 @@ from .delivery import Delivery
 from .dnscheck import check_domain, domain_of
 from .maintenance import backup_store, health, prune_logs
 from .pipeline import freeze_markdown, generate_markdown
-from .store import BEIJING, EDITIONS, Store, edition_for, utcnow
+from .store import BEIJING, EDITIONS, TIP_CHANNELS, Store, edition_for, utcnow
+
+
+def yuan_to_fen(value):
+    """Parse a yuan amount with at most two decimals without floating point error."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        amount = Decimal(value.strip())
+    except InvalidOperation as error:
+        raise SystemExit("金额格式不正确，例如 6.66") from error
+    if amount <= 0 or amount != amount.quantize(Decimal("0.01")) or amount > 100000:
+        raise SystemExit("金额须大于 0、最多两位小数、不超过 100000 元")
+    return int(amount * 100)
 
 
 def main():
@@ -38,6 +50,17 @@ def main():
     dns.add_argument("--selector", default="resend")
     dns.add_argument("--send-label", default="send")
     commands.add_parser("scan")
+    tip = commands.add_parser("tip", help="record voluntary tips for the public leaderboard")
+    tip_commands = tip.add_subparsers(dest="tip_command", required=True)
+    tip_add = tip_commands.add_parser("add")
+    tip_add.add_argument("--name", default="", help="nickname from the payment note, empty for anonymous")
+    tip_add.add_argument("--amount", required=True, help="amount in yuan, for example 6.66")
+    tip_add.add_argument("--channel", choices=TIP_CHANNELS, default="alipay")
+    tip_add.add_argument("--date", help="Beijing date of the payment, default today")
+    tip_commands.add_parser("list")
+    tip_remove = tip_commands.add_parser("remove")
+    tip_remove.add_argument("--id", type=int)
+    tip_remove.add_argument("--name")
     commands.add_parser("publish")
     commands.add_parser("generate")
     scheduler = commands.add_parser("schedule")
@@ -134,6 +157,18 @@ def main():
         print(json.dumps({"domain": domain, "checks": checks}, ensure_ascii=False, indent=1))
         if any(check["status"] == "fail" for check in checks):
             raise SystemExit(1)
+    elif args.command == "tip":
+        if args.tip_command == "add":
+            amount = yuan_to_fen(args.amount)
+            tipped_on = args.date or now.astimezone(BEIJING).date().isoformat()
+            tip_id = store.add_tip(args.name, amount, args.channel, tipped_on, now)
+            print(json.dumps({"id": tip_id, "amount_fen": amount}))
+        elif args.tip_command == "list":
+            for row in store.tips():
+                print(json.dumps({"id": row["id"], "date": row["tipped_on"], "name": row["name"] or "(匿名)",
+                                  "yuan": row["amount"] / 100, "channel": TIP_CHANNELS[row["channel"]]}, ensure_ascii=False))
+        else:
+            print(json.dumps({"removed": store.remove_tips(args.id, args.name)}))
     elif args.command == "status":
         with store.connect() as conn:
             statuses = {row["status"]: row["count"] for row in conn.execute("SELECT status,count(*) AS count FROM delivery_log GROUP BY status")}

@@ -16,6 +16,13 @@
 
 - 默认 `BRIEF_MODE=museletter`：内容由本仓库生成，订阅者、确认、退订、抑制与发送账本由 Museletter 管理，见 `docs/museletter.md`。`subscription` 为原付费系统，`personal` 为个人版。
 
+## 当前运营模式：免费订阅加自愿打赏（2026-11-17 起）
+
+- 线上设 `BRIEF_FREE_ACCESS=1`，订阅免费不限量，不发续费提醒，首页和管理页不展示套餐。支付宝订单代码保留但不开放，`/api/options` 的 `payments` 仅在未开免费且支付宝配置齐全时为真。
+- 打赏走运营者个人支付宝／微信收款码，系统收不到通知。收款码图片放在数据盘 `BRIEF_TIP_CODE_DIR`（默认数据库旁 `tip-codes/`），文件名 `alipay.png`、`wechat.png`，不得提交到 Git。
+- 打赏记录由运营者用 `python -m subscription.cli tip add` 手工录入，`tips` 表只存昵称、金额（分）、渠道、日期，不与订阅者关联，不存付款人姓名或账号。昵称最多 20 字，拒绝含 `@` 或不可打印字符。
+- 大哥榜只列有昵称的记录，按昵称累计金额降序，同额按先上榜排序。读者要求撤榜时用 `tip remove --name` 删除该昵称全部记录。
+
 ## 硬性规则
 
 - 一次推进一个目标，修改前说明计划，仅修改当前目标所需文件。本任务明确授权新增 schema 和相关配置。

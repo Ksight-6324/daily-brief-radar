@@ -27,7 +27,7 @@
       <mj-column>
         <mj-text font-size="12px" color="#66736a">
           你主动确认订阅后收到此邮件。偏好用于调整排序。<br />
-          <a href="$manage_url" style="color:#285440">管理偏好或续费</a> ·
+          <a href="$manage_url" style="color:#285440">管理偏好</a> · <a href="$support_url" style="color:#285440">觉得有用？打赏一下</a> ·
           <a href="$unsubscribe_url" style="color:#285440">退订每日邮件</a>
         </mj-text>
       </mj-column>

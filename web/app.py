@@ -15,13 +15,14 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictBool
 
-from subscription.delivery import ACCOUNT_QUERY, Delivery, eligibility
+from subscription.delivery import ACCOUNT_QUERY, Delivery, eligibility, free_access
 from subscription.feed import build_feed
 from subscription.payments import Alipay
 from subscription.store import PLAN_LABELS, PLANS, SECTIONS, Store, normalize_email, stamp, utcnow
 
 
 STATIC = Path(__file__).with_name("static")
+TIP_CODE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 
 
 class Signup(BaseModel):
@@ -104,7 +105,30 @@ def create_app(store=None, delivery=None, payment=None):
                       for key, (amount, days) in PLANS.items()],
             "schedule": {"timezone": "Asia/Shanghai", "times": ["08:00", "20:00"]},
             "contact": contact(),
+            # Paid renewal is offered only when Alipay is configured and reading is not free for everyone.
+            "payments": payments_open(),
         }
+
+    def payments_open():
+        return not free_access() and all((payment.app_id, payment.seller_id, payment.public_key, payment.private_key))
+
+    def tip_code_dir():
+        # Payment codes identify the operator, so they live on the data disk instead of in Git.
+        return Path(os.environ.get("BRIEF_TIP_CODE_DIR") or store.path.parent / "tip-codes")
+
+    @app.get("/api/leaderboard")
+    def leaderboard():
+        return {"tippers": store.leaderboard()}
+
+    @app.get("/api/tip-codes/{channel}")
+    def tip_code(channel: str):
+        if channel not in ("alipay", "wechat"):
+            raise HTTPException(404, "没有这个收款码")
+        for suffix, media_type in TIP_CODE_TYPES.items():
+            path = tip_code_dir() / (channel + suffix)
+            if path.is_file():
+                return FileResponse(path, media_type=media_type)
+        raise HTTPException(404, "收款码尚未上传")
 
     @app.post("/api/subscribe")
     def subscribe(values: Signup, request: Request):
@@ -163,7 +187,7 @@ def create_app(store=None, delivery=None, payment=None):
         return {"email": row["email"], "status": row["status"], "preferences": json.loads(row["preferences"]),
                 "trial_remaining": row["trial_remaining"], "confirmed": bool(row["confirmed_at"]),
                 "expires_at": sub["expires_at"] if sub else None, "delivery_mode": mode,
-                "payment_configured": bool(payment.app_id and payment.seller_id and payment.private_key and payment.public_key)}
+                "payment_configured": payments_open()}
 
     @app.post("/api/preferences")
     def update_preferences(values: Preferences, request: Request):
@@ -192,7 +216,7 @@ def create_app(store=None, delivery=None, payment=None):
         row = account(request)
         if not row["confirmed_at"] or row["status"] == "unsubscribed":
             raise HTTPException(403, "请先确认邮箱并保持订阅状态")
-        if not all((payment.app_id, payment.seller_id, payment.public_key, payment.private_key)):
+        if not payments_open():
             raise HTTPException(503, "支付服务尚未开放，请稍后重试")
         if not store.allow_request("orders:" + row["id"], 12):
             raise HTTPException(429, "创建订单较频繁，请稍后重试")
@@ -257,6 +281,10 @@ def create_app(store=None, delivery=None, payment=None):
     @app.get("/terms")
     def terms():
         return FileResponse(STATIC / "terms.html")
+
+    @app.get("/support")
+    def support():
+        return FileResponse(STATIC / "support.html")
 
     @app.get("/")
     @app.get("/confirm")

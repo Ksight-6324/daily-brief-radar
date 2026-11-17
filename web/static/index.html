@@ -24,7 +24,7 @@
           >DAILY BRIEF RADAR</a
         >
         <nav aria-label="主导航">
-          <a href="/#preview">邮件</a><a href="/#plans">价格</a
+          <a href="/#preview">邮件</a><a href="/support">打赏</a
           ><a id="home-link" href="/manage">我的主页</a>
         </nav>
       </header>
@@ -247,8 +247,8 @@
 
           <section id="subscribe" class="subscribe-section" aria-labelledby="subscribe-heading">
             <p class="page-no">No.06</p>
-            <h2 id="subscribe-heading" class="page-big"><span>免费试读三期。</span></h2>
-            <p class="page-small">填写邮箱，选几个主题，也可以都不选。</p>
+            <h2 id="subscribe-heading" class="page-big"><span>免费订阅。</span></h2>
+            <p class="page-small">不收费，不限量。填写邮箱，选几个主题，也可以都不选。</p>
             <form id="subscribe-form">
               <div class="email-field">
                 <label class="field-label" for="email">邮箱地址</label>
@@ -280,7 +280,7 @@
               >
               <div class="subscribe-actions">
                 <button class="button primary compact" id="subscribe-button" type="submit" disabled>
-                  免费试读 3 期
+                  免费订阅
                 </button>
                 <p class="form-note">提交后请打开确认邮件并点击“确认订阅”，未确认不会发送。没收到请看垃圾邮件。</p>
               </div>
@@ -288,11 +288,11 @@
             </form>
           </section>
 
-          <section id="plans" class="plans-section" aria-labelledby="plans-heading">
+          <section id="tips" class="plans-section tips-section" aria-labelledby="tips-heading">
             <p class="page-no">No.07</p>
-            <h2 id="plans-heading" class="page-big"><span>一份简报，<br />一个价格。</span></h2>
-            <p class="page-small">选择周期，手动续费，不自动扣款。</p>
-            <div id="plan-options" class="plans-grid"></div>
+            <h2 id="tips-heading" class="page-big"><span>免费读，<br />随心赏。</span></h2>
+            <p class="page-small">订阅不收费。觉得有用，扫码请作者喝杯咖啡，备注昵称还能登上大哥榜。</p>
+            <a class="button primary cta" href="/support">去打赏 · 看大哥榜</a>
           </section>
 
           <section class="page finale" aria-labelledby="finale-heading">
@@ -300,7 +300,7 @@
             <p class="page-no">No.08</p>
             <h2 id="finale-heading" class="page-big"><span>你的每日简讯，</span><span>选择天天雷达！</span></h2>
             <p class="page-small">每天早 8 点、晚 8 点，三分钟读完这个世界。</p>
-            <a class="button primary cta finale-cta" href="#subscribe">免费试读 3 期</a>
+            <a class="button primary cta finale-cta" href="#subscribe">免费订阅</a>
           </section>
         </div>
 
@@ -311,14 +311,14 @@
           aria-labelledby="confirmation-heading"
         >
           <p class="panel-context">邮箱确认</p>
-          <h1 id="confirmation-heading">开始你的三期试读。</h1>
+          <h1 id="confirmation-heading">确认邮箱，开始阅读。</h1>
           <p>
             <strong>还差最后一步：请点击下方按钮，订阅才会生效。</strong>
             确认后，北京时间每天 08:00 和 20:00
             各收到一封简报。你可以随时调整排序，或停止接收邮件。
           </p>
           <button id="confirm-button" class="button primary">
-            确认邮箱并开始试读
+            确认邮箱并开始阅读
           </button>
           <p id="confirm-feedback" class="feedback" role="status"></p>
         </section>
@@ -348,7 +348,7 @@
           </form>
           <p id="login-feedback" class="feedback" role="status" aria-live="polite"></p>
           <p class="form-note">
-            还没有订阅？<a href="/#subscribe">选择主题，免费试读</a>
+            还没有订阅？<a href="/#subscribe">选择主题，免费订阅</a>
           </p>
         </section>
 
@@ -406,7 +406,7 @@
             </button>
           </form>
           <p id="management-feedback" class="feedback" role="status"></p>
-          <div id="renewal" class="renewal-options">
+          <div id="renewal" class="renewal-options" hidden>
             <h2>选择续费周期</h2>
             <p>提前续费保留剩余天数。到期后有三天宽限期。</p>
             <div id="renewal-plan-options" class="renewal-buttons"></div>
@@ -430,6 +430,7 @@
           <p class="account-actions">
             <a id="unsubscribe-link" href="/unsubscribe">停止接收每日邮件</a>
             · <a id="delete-link" href="/delete">删除账号</a>
+            · <a href="/support">觉得有用？打赏一下</a>
           </p>
         </section>
 
@@ -499,10 +500,10 @@
       <footer class="site-footer">
         <div class="foot-top">
           <span class="foot-brand">DAILY BRIEF RADAR</span>
-          <div class="foot-links"><a href="/privacy">隐私政策</a><a href="/terms">服务条款</a></div>
+          <div class="foot-links"><a href="/support">打赏</a><a href="/privacy">隐私政策</a><a href="/terms">服务条款</a></div>
         </div>
         <div class="foot-bottom">
-          <p>主动确认订阅 · 随时退订 · 支持通用版排序</p>
+          <p>免费订阅 · 主动确认 · 随时退订</p>
           <p>AI 辅助摘要，请以原始来源为准。</p>
         </div>
       </footer>

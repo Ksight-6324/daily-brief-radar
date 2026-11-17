@@ -110,27 +110,15 @@ async function loadOptions() {
     form.querySelector('button[type="submit"]').disabled = false;
     updateTopicCount(form);
   }
+  // Reading is free and supported by tips. Paid renewal appears only if the server opens payments again.
+  byId("renewal").hidden = !options.payments;
+  if (!options.payments) return;
   for (const plan of options.plans) {
-    const amount = `¥${plan.amount / 100}`;
-    const card = document.createElement("article");
-    card.className = "plan";
-    const title = document.createElement("h3");
-    title.textContent = plan.label;
-    const price = document.createElement("p");
-    price.className = "price";
-    price.textContent = amount;
-    const duration = document.createElement("p");
-    duration.textContent = `${plan.days} 天 · 手动续费`;
     const button = document.createElement("button");
-    button.className = "text-button";
+    button.className = "button secondary";
     button.dataset.plan = plan.id;
-    button.textContent = `选择${plan.label}`;
-    card.append(title, price, duration, button);
-    byId("plan-options").append(card);
-    const renewal = button.cloneNode(true);
-    renewal.className = "button secondary";
-    renewal.textContent = `${plan.label} ${amount}`;
-    byId("renewal-plan-options").append(renewal);
+    button.textContent = `${plan.label} ¥${plan.amount / 100}`;
+    byId("renewal-plan-options").append(button);
   }
 }
 
@@ -178,7 +166,7 @@ function describeAccount(account) {
   if (account.delivery_mode === "grace")
     return `订阅已于 ${formatExpiry(account.expires_at)} 到期，三天宽限期内仍会收到简报，请尽快续费。下一封：${next}。`;
   if (account.delivery_mode === "free")
-    return `收款开通前免费阅读，每天两封照常送达，不消耗试读次数。下一封：${next}。`;
+    return `免费订阅中，每天早晚各一封。下一封：${next}。`;
   if (account.delivery_mode === "trial")
     return `免费试读还剩 ${account.trial_remaining} 封。下一封：${next}。`;
   if (account.expires_at) return "订阅已暂停，完成续费后恢复每日两封。";
@@ -333,7 +321,7 @@ byId("confirm-button").addEventListener("click", async () => {
     saveToken(manageToken);
     history.replaceState(null, "", "/manage");
     showPanel("management-panel");
-    feedback("management-feedback", "邮箱已确认，三期免费试读已开启。");
+    feedback("management-feedback", "邮箱已确认，每天 08:00 早报、20:00 晚报会送到你的邮箱。");
     await loadAccount();
   } catch (error) {
     feedback("confirm-feedback", error.message, true);
