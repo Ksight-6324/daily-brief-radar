@@ -66,53 +66,87 @@
             </div>
             <div class="twelve-clock" aria-hidden="true">
               <svg class="clock" viewBox="0 0 400 440" focusable="false">
-                <line class="ck-leg" x1="128" y1="366" x2="98" y2="414"></line>
-                <line class="ck-leg" x1="272" y1="366" x2="302" y2="414"></line>
-                <g transform="rotate(-32 200 230)">
-                  <g class="ck-bell ck-bell-l">
-                    <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
-                    <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
-                    <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
-                    <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                <g class="scene scene-clock">
+                  <line class="ck-leg" x1="128" y1="366" x2="98" y2="414"></line>
+                  <line class="ck-leg" x1="272" y1="366" x2="302" y2="414"></line>
+                  <g transform="rotate(-32 200 230)">
+                    <g class="ck-bell ck-bell-l">
+                      <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
+                      <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
+                      <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
+                      <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                    </g>
+                  </g>
+                  <g transform="rotate(32 200 230)">
+                    <g class="ck-bell ck-bell-r">
+                      <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
+                      <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
+                      <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
+                      <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                    </g>
+                  </g>
+                  <g class="ck-face">
+                    <circle class="ck-body" cx="200" cy="230" r="150"></circle>
+                    <circle class="ck-minutes" cx="200" cy="230" r="136"></circle>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(0 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(30 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(60 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(90 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(120 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(150 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(180 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(210 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(240 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(270 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(300 200 230)"></line>
+              <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(330 200 230)"></line>
+                    <circle class="ck-track" cx="200" cy="230" r="113"></circle>
+                    <circle class="ck-arc" cx="200" cy="230" r="113" transform="rotate(150 200 230)"></circle>
+                    <text class="ck-num" x="200" y="150">12</text>
+                    <text class="ck-num" x="282" y="230">3</text>
+                    <text class="ck-num" x="200" y="310">6</text>
+                    <text class="ck-num" x="118" y="230">9</text>
+                    <line class="ck-hand ck-hour" x1="200" y1="230" x2="200" y2="172"></line>
+                    <line class="ck-hand ck-minute" x1="200" y1="230" x2="200" y2="128"></line>
+                    <circle class="ck-cap" cx="200" cy="230" r="9"></circle>
                   </g>
                 </g>
-                <g transform="rotate(32 200 230)">
-                  <g class="ck-bell ck-bell-r">
-                    <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
-                    <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
-                    <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
-                    <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                <g class="scene scene-phone">
+                  <g class="ph-body">
+                    <rect class="ph-shell" x="105" y="22" width="190" height="396" rx="36"></rect>
+                    <rect class="ph-speaker" x="172" y="42" width="56" height="8" rx="4"></rect>
+                    <text class="ph-time alt-a" x="200" y="116">20:00</text>
+                    <text class="ph-time alt-b" x="200" y="116">08:00</text>
+                    <text class="ph-date" x="200" y="156">北京时间</text>
+                    <g class="ph-ghost">
+                      <rect x="124" y="326" width="152" height="54" rx="12"></rect>
+                      <line x1="140" y1="346" x2="214" y2="346"></line>
+                      <line x1="140" y1="362" x2="190" y2="362"></line>
+                    </g>
+                    <g class="ph-notif">
+                      <rect class="pn-card" x="120" y="196" width="160" height="108" rx="18"></rect>
+                      <rect class="pn-env" x="134" y="214" width="34" height="26" rx="4"></rect>
+                      <polyline class="pn-flap" points="134,216 151,232 168,216"></polyline>
+                      <text class="pn-app" x="178" y="232">Daily Brief Radar</text>
+                      <text class="pn-title alt-a" x="134" y="271">晚报已送达</text>
+                      <text class="pn-title alt-b" x="134" y="271">早报已送达</text>
+                      <text class="pn-sub" x="134" y="291">三分钟读完，点开阅读</text>
+                    </g>
+                    <g class="pn-badge">
+                      <circle cx="280" cy="196" r="15"></circle>
+                      <text x="280" y="197">1</text>
+                    </g>
+                    <rect class="ph-home" x="172" y="402" width="56" height="6" rx="3"></rect>
                   </g>
-                </g>
-                <g class="ck-face">
-                  <circle class="ck-body" cx="200" cy="230" r="150"></circle>
-                  <circle class="ck-minutes" cx="200" cy="230" r="136"></circle>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(0 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(30 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(60 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(90 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(120 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(150 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(180 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(210 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(240 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(270 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(300 200 230)"></line>
-            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(330 200 230)"></line>
-                  <circle class="ck-track" cx="200" cy="230" r="113"></circle>
-                  <circle class="ck-arc" cx="200" cy="230" r="113" transform="rotate(150 200 230)"></circle>
-                  <text class="ck-num" x="200" y="150">12</text>
-                  <text class="ck-num" x="282" y="230">3</text>
-                  <text class="ck-num" x="200" y="310">6</text>
-                  <text class="ck-num" x="118" y="230">9</text>
-                  <line class="ck-hand ck-hour" x1="200" y1="230" x2="200" y2="172"></line>
-                  <line class="ck-hand ck-minute" x1="200" y1="230" x2="200" y2="128"></line>
-                  <circle class="ck-cap" cx="200" cy="230" r="9"></circle>
+                  <path class="ph-wave" d="M 84 150 q -16 50 0 100"></path>
+                  <path class="ph-wave" d="M 62 130 q -24 70 0 140"></path>
+                  <path class="ph-wave" d="M 316 150 q 16 50 0 100"></path>
+                  <path class="ph-wave" d="M 338 130 q 24 70 0 140"></path>
                 </g>
               </svg>
               <p class="clock-cap">
-                <span class="cap-a"><b>08:00 → 20:00</b>12 小时，写成晚报</span>
-                <span class="cap-b"><b>20:00 → 08:00</b>12 小时，写成早报</span>
+                <span class="cap-a"><b>08:00 → 20:00</b>12 小时，写成晚报，发到你的邮箱</span>
+                <span class="cap-b"><b>20:00 → 08:00</b>12 小时，写成早报，发到你的邮箱</span>
               </p>
             </div>
           </section>
@@ -132,8 +166,8 @@
               <h2 id="page-three" class="three-title">三条优势。</h2>
               <ol class="three-list">
                 <li><b>01</b><strong>比短视频更快</strong><span>三分钟读完，不用再刷上一小时。</span></li>
-                <li><b>02</b><strong>比营销号更全</strong><span>十六个主题，从财经、科技到历史、时尚。</span></li>
-                <li><b>03</b><strong>比报道更全面</strong><span>汇总多方来源，讲清影响，附原始来源。</span></li>
+                <li><b>02</b><strong>比营销号更可信</strong><span>每条都附原始来源，随时点开核对。</span></li>
+                <li><b>03</b><strong>比报道更全面</strong><span>十六个主题，从财经、科技到历史、时尚。</span></li>
               </ol>
             </div>
           </section>

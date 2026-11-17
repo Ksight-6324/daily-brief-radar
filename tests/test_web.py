@@ -261,7 +261,7 @@ class WebTest(StoreCase):
     def test_home_page_introduces_the_service_and_obeys_the_content_security_policy(self):
         import re
         page = self.client.get("/").text
-        for text in ("短视频的新闻？", "看了就忘！", "不如在三分钟", "而不是让短视频填满你三小时", "每日 AI 报告", "12 个小时", "三条优势", "比短视频更快", "比营销号更全", "比报道更全面", "选择天天雷达！", "每天汇总全球要点", "自动发到你的邮箱", "08:00", "20:00", "示例"):
+        for text in ("短视频的新闻？", "看了就忘！", "不如在三分钟", "而不是让短视频填满你三小时", "每日 AI 报告", "12 个小时", "三条优势", "比短视频更快", "比营销号更可信", "比报道更全面", "选择天天雷达！", "每天汇总全球要点", "自动发到你的邮箱", "08:00", "20:00", "示例"):
             self.assertIn(text, page)
         for anchor in ('id="preview"', 'id="subscribe"', 'id="plans"', 'id="subscribe-form"', 'href="/#preview"'):
             self.assertIn(anchor, page)
