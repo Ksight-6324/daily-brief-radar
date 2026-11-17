@@ -108,3 +108,6 @@ class TipWebTest(StoreCase):
                                   "https://brief.example.com", "token")
         self.assertIn('href="https://brief.example.com/support"', html)
         self.assertIn("https://brief.example.com/support", text)
+        for body in (html, text):
+            self.assertIn("一毛、一块还是一百，在我这都是莫大的鼓励", body)
+        self.assertEqual(html.count("/support"), 1)

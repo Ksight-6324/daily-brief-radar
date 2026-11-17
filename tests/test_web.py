@@ -308,7 +308,7 @@ class WebTest(StoreCase):
         for fact in ("订阅不收费，也不限量。", "不会自动扣款", "打赏完全自愿，金额随意。", "大哥榜", "没有备注的打赏不上榜",
                      "撤下", "原路退回", "不构成投资", "请以原始来源为准", "08:00", "20:00"):
             self.assertIn(fact, text)
-        for stale in ("免费试读", "宽限期", "周付", "手动续费"):
+        for stale in ("免费试读", "宽限期", "周付", "手动续费", "已支付的费用"):
             self.assertNotIn(stale, text)
         self.assertIn('href="/privacy"', page)
         self.assertIn('id="contact-line"', page)

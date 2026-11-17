@@ -76,7 +76,7 @@ def render_issue(issue_date, sections, selected, base_url, token, grace=False, e
                                manage_url=escape(manage_url, quote=True), unsubscribe_url=escape(unsubscribe_url, quote=True),
                                support_url=escape(base_url + "/support", quote=True))
     text_parts += [banner, "观察点 · " + observation, "管理偏好 " + manage_url,
-                   "觉得有用？打赏一下 " + base_url + "/support", "退订 " + unsubscribe_url]
+                   "觉得有用？打赏一下：一毛、一块还是一百，在我这都是莫大的鼓励，当然一百以上更好了。 " + base_url + "/support", "退订 " + unsubscribe_url]
     return html, "\n\n".join(text_parts)
 
 
