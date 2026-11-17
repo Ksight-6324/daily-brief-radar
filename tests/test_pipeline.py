@@ -26,7 +26,7 @@ class PipelineTest(StoreCase):
         summarizer = SimpleNamespace(
             load_json=lambda _: {"items": items}, load_seen=lambda _: (set(), [], []),
             filter_seen=lambda candidates, _: candidates, NO_ADVICE_RULE="依据原始来源。",
-            summarize_one_pick=lambda label, candidates, *args: f"官方|||{label}|||{candidates[0]['url']}|||主题|||事实|||影响",
+            summarize_one_pick=lambda label, candidates, *args, **kwargs: f"官方|||{label}|||{candidates[0]['url']}|||主题|||事实|||影响",
             save_seen=Mock(),
         )
         with patch.dict(sys.modules, {"summarize": summarizer}), patch("subscription.pipeline.Path.write_text"):
@@ -43,9 +43,11 @@ class PipelineTest(StoreCase):
         items = [{"category": "历史" if key == "history" else label, "title": label,
                   "url": "https://example.com/" + key} for key, label in SECTIONS.items()]
         rules = {}
+        lenses = {}
 
-        def pick(label, candidates, top_n, rule, *args):
+        def pick(label, candidates, top_n, rule, *args, **kwargs):
             rules[label] = rule
+            lenses[label] = kwargs.get("lens")
             return f"官方|||{label}|||{candidates[0]['url']}|||主题|||事实|||影响"
 
         summarizer = SimpleNamespace(
@@ -61,6 +63,8 @@ class PipelineTest(StoreCase):
         self.assertIn("电竞赛事", rules["电竞游戏"])
         self.assertIn("潮流风格", rules["时尚穿搭"])
         self.assertIn("色彩搭配", rules["时尚穿搭"])
+        self.assertEqual(sorted(lenses.values()).count("everyday"), 11)
+        self.assertEqual(sorted(lenses.values()).count("frontier"), 5)
 
     def test_snapshot_date_follows_beijing_after_utc_date_boundary(self):
         when = datetime(2026, 11, 15, 16, 5, tzinfo=timezone.utc)

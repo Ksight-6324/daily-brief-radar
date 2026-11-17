@@ -54,6 +54,7 @@ def generate_markdown(now=None, edition=None):
     core_path = str(Path(__file__).resolve().parents[1] / "core")
     if core_path not in sys.path:
         sys.path.insert(0, core_path)
+    import style_rules
     import summarize
 
     # These settings are local to this generator process and never come from a reader profile.
@@ -65,6 +66,9 @@ def generate_markdown(now=None, edition=None):
     seen_urls, seen_titles, records = summarize.load_seen(now)
     items = summarize.filter_seen(category_data["items"], seen_urls)
     sections = {}
+    issue_date = f"{now.astimezone(BEIJING):%Y-%m-%d}"
+    # About 70% of the topics lean towards ordinary readers' daily lives; the rest may carry specialist frontier news.
+    lenses = style_rules.lens_for_topics(SECTIONS, issue_date, edition)
     for key, label in SECTIONS.items():
         category = "历史" if key == "history" else label
         candidates = [item for item in items if item.get("category") == category]
@@ -84,12 +88,12 @@ def generate_markdown(now=None, edition=None):
         if key == "fashion":
             rule += ("覆盖全球时尚动态：时装周与品牌发布、流行趋势、不同的潮流风格。摘要说清这是什么风格或趋势，"
                      "点评写出可参考的穿搭与色彩搭配思路（主色、辅色或点缀色）。促销折扣、购物清单、明星八卦不要选。")
-        result = summarize.summarize_one_pick(category, candidates, 1, rule, seen_titles)
+        result = summarize.summarize_one_pick(category, candidates, 1, rule, seen_titles, lens=lenses[key])
         if result.strip():
             sections[key] = result
     if not sections:
         raise ValueError("本期没有有效内容，停止发布")
-    text = f"DATE|||{now.astimezone(BEIJING):%Y-%m-%d}\nSLOT|||{edition}\n"
+    text = f"DATE|||{issue_date}\nSLOT|||{edition}\n"
     text += "".join(f"SECTION|||{key}\n{content}\n" for key, content in sections.items())
     Path("daily_brief.md").write_text(text, encoding="utf-8")
     # Content-selection history is independent of per-subscriber provider acceptance.

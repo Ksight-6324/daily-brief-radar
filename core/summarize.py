@@ -37,6 +37,7 @@ from datetime import datetime
 # 同目录下的模块（python core/summarize.py 运行时，core/ 会自动在导入路径里）
 import layout
 import learning
+import style_rules
 import youtube_digest
 
 # ============ DeepSeek API Key：从环境变量读取（GitHub Secrets 里配置） ============
@@ -409,6 +410,7 @@ def attach_source_to_lines(text, item_pool):
             source = item.get("source") or SUBCATEGORY_SOURCE_NAME.get(item.get("subcategory", ""), "")
         else:
             source = source_from_domain(url)
+        source = style_rules.zh_source(source)
         if source:
             out_lines.append(f"{source}|||{line}")
         else:
@@ -501,12 +503,14 @@ def get_top_picks(github_data, hn_data, rss_data, seen_titles=None):
 
 {NO_RHETORIC_RULE}
 
+{style_rules.reader_rules(len(candidate_blocks))}
+
 不要写多余的开场白。
 
 {seen_block}候选内容：
 {all_candidates}
 """
-    result = call_deepseek(prompt)
+    result = style_rules.localize_cards(call_deepseek(prompt), call_deepseek)
     return result, used_titles
 
 
@@ -569,17 +573,20 @@ def summarize_tech(github_data, hn_data, rss_data, exclude_titles, top_picks_tex
 
 {NO_RHETORIC_RULE}
 
+{style_rules.reader_rules(TECH_TOP_N)}
+
 按重要程度从高到低排列。不要写多余的开场白。
 
 原始信息：
 {combined}
 """
     result = call_deepseek(prompt)
-    return attach_source_to_lines(result, item_pool)
+    return style_rules.localize_cards(attach_source_to_lines(result, item_pool), call_deepseek)
 
 
-def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
-    """经济/政治子类、科学突破的通用总结函数"""
+def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None, lens=None):
+    """经济/政治子类、科学突破的通用总结函数。lens 为 everyday 或 frontier 时按该取向选稿，
+    不传则按“至少 70% 贴近普通人”的比例选稿。"""
     if not items:
         return ""
 
@@ -609,6 +616,8 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
 
 {NO_RHETORIC_RULE}
 
+{style_rules.reader_rules(top_n, lens)}
+
 事实要求：只能依据上面给出的标题和摘要来写，原文里没有的数字、人名、结论、原因一律不要编造；
 信息不够就换一条，或者直接不选。
 
@@ -628,7 +637,7 @@ def summarize_one_pick(label, items, top_n, extra_rule="", seen_titles=None):
             f"{source_name}|||{line}" if "|||" in line else line
             for line in result.split("\n")
         )
-    return result
+    return style_rules.localize_cards(result, call_deepseek)
 
 
 def _format_item_line(x, default_source):
