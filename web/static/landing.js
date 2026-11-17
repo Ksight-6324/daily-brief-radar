@@ -221,17 +221,12 @@
       big.classList.add("will-rise");
       observer.observe(big);
     }
-    for (const small of $$(".page .page-small, .page .page-no, .page-topics, .finale-cta, #landing section > .page-small", landing)) {
+    for (const small of $$(".page .page-small, .page .page-no, .page-topics, .twelve-clock, .finale-cta, #landing section > .page-small", landing)) {
       small.classList.add("fade-late", "will-fade");
       observer.observe(small);
     }
 
-    // The twelve-hour page: the two halves of the day fill in, and the number counts up to 12.
-    const twelveBar = $(".twelve-bar", landing);
-    if (twelveBar) {
-      twelveBar.classList.add("will-fill");
-      observer.observe(twelveBar);
-    }
+    // The twelve-hour page: the number counts up to 12 while the alarm clock settles in.
     const twelve = $(".twelve-num b", landing);
     if (twelve) {
       twelve.textContent = "0";

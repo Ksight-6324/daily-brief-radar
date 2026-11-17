@@ -56,18 +56,64 @@
           </section>
 
           <section class="page page-twelve" aria-labelledby="page-twelve">
-            <p class="page-no">No.01</p>
-            <h2 id="page-twelve" class="page-big"><span>所以我开发了</span><span>每日 AI 报告。</span></h2>
-            <div class="twelve-row">
-              <p class="twelve-num" aria-hidden="true"><b>12</b><small>小时</small></p>
-              <p class="page-small">它会告诉你，这 12 个小时里，<br />这个世界发生了什么。</p>
-            </div>
-            <div class="twelve-bar" aria-hidden="true">
-              <div class="twelve-segs">
-                <div class="seg seg-a"><span>12 小时</span><em>晚报</em></div>
-                <div class="seg seg-b"><span>12 小时</span><em>早报</em></div>
+            <div class="twelve-copy">
+              <p class="page-no">No.01</p>
+              <h2 id="page-twelve" class="page-big"><span>所以我开发了</span><span>每日 AI 报告。</span></h2>
+              <div class="twelve-row">
+                <p class="twelve-num" aria-hidden="true"><b>12</b><small>小时</small></p>
+                <p class="page-small">它会告诉你，这 12 个小时里，<br />这个世界发生了什么。</p>
               </div>
-              <p class="twelve-ticks"><span>08:00</span><span>20:00</span><span>08:00</span></p>
+            </div>
+            <div class="twelve-clock" aria-hidden="true">
+              <svg class="clock" viewBox="0 0 400 440" focusable="false">
+                <line class="ck-leg" x1="128" y1="366" x2="98" y2="414"></line>
+                <line class="ck-leg" x1="272" y1="366" x2="302" y2="414"></line>
+                <g transform="rotate(-32 200 230)">
+                  <g class="ck-bell ck-bell-l">
+                    <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
+                    <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
+                    <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
+                    <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                  </g>
+                </g>
+                <g transform="rotate(32 200 230)">
+                  <g class="ck-bell ck-bell-r">
+                    <path class="ck-dome" d="M 158 84 A 42 42 0 0 1 242 84 Z"></path>
+                    <circle class="ck-knob" cx="200" cy="38" r="6"></circle>
+                    <path class="ck-wave" d="M 148 56 q -16 10 -16 32"></path>
+                    <path class="ck-wave" d="M 252 56 q 16 10 16 32"></path>
+                  </g>
+                </g>
+                <g class="ck-face">
+                  <circle class="ck-body" cx="200" cy="230" r="150"></circle>
+                  <circle class="ck-minutes" cx="200" cy="230" r="136"></circle>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(0 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(30 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(60 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(90 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(120 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(150 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(180 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(210 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(240 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(270 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(300 200 230)"></line>
+            <line class="ck-tick" x1="200" y1="98" x2="200" y2="112" transform="rotate(330 200 230)"></line>
+                  <circle class="ck-track" cx="200" cy="230" r="113"></circle>
+                  <circle class="ck-arc" cx="200" cy="230" r="113" transform="rotate(150 200 230)"></circle>
+                  <text class="ck-num" x="200" y="150">12</text>
+                  <text class="ck-num" x="282" y="230">3</text>
+                  <text class="ck-num" x="200" y="310">6</text>
+                  <text class="ck-num" x="118" y="230">9</text>
+                  <line class="ck-hand ck-hour" x1="200" y1="230" x2="200" y2="172"></line>
+                  <line class="ck-hand ck-minute" x1="200" y1="230" x2="200" y2="128"></line>
+                  <circle class="ck-cap" cx="200" cy="230" r="9"></circle>
+                </g>
+              </svg>
+              <p class="clock-cap">
+                <span class="cap-a"><b>08:00 → 20:00</b>12 小时，写成晚报</span>
+                <span class="cap-b"><b>20:00 → 08:00</b>12 小时，写成早报</span>
+              </p>
             </div>
           </section>
 
@@ -86,7 +132,7 @@
               <h2 id="page-three" class="three-title">三条优势。</h2>
               <ol class="three-list">
                 <li><b>01</b><strong>比短视频更快</strong><span>三分钟读完，不用再刷上一小时。</span></li>
-                <li><b>02</b><strong>比新闻联播更全</strong><span>十六个主题，从财经、科技到历史、时尚。</span></li>
+                <li><b>02</b><strong>比营销号更全</strong><span>十六个主题，从财经、科技到历史、时尚。</span></li>
                 <li><b>03</b><strong>比报道更全面</strong><span>汇总多方来源，讲清影响，附原始来源。</span></li>
               </ol>
             </div>
