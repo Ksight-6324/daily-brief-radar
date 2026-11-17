@@ -158,6 +158,11 @@ CATEGORY_SOURCES = {
             "Scott Young": "https://www.scotthyoung.com/blog/feed/",
             "Farnam Street": "https://fs.blog/feed/",
             "Psychology Today": "https://www.psychologytoday.com/us/front/feed",
+            # 温和的博客、文章与口播演讲，替代已下架的 YouTube 频道
+            "The Marginalian": "https://www.themarginalian.org/feed/",
+            "Raptitude": "https://www.raptitude.com/feed/",
+            "Ness Labs": "https://nesslabs.com/feed",
+            "TED演讲": "https://www.ted.com/talks/rss",
             "自律与自控力": _gnews("自律 OR 自控力 OR 习惯养成 OR 拖延症 OR 行动力"),
             "自控力研究": _gnews("self-discipline OR self-control OR willpower OR procrastination study",
                                   lang="en-US", gl="US", ceid="US:en"),

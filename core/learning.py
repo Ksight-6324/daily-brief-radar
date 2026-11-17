@@ -14,6 +14,8 @@ from urllib.parse import quote
 
 import requests
 
+import style_rules
+
 WIKI_HEADERS = {
     "User-Agent": "daily-brief-radar/1.0 (personal newsletter; contact via GitHub)",
     "Accept-Language": "zh-CN,zh;q=0.9",
@@ -155,6 +157,7 @@ def build_history(call_ai, now, slot, seen_urls=None, count=3):
 编号|||简体中文标题（15字以内）|||解读（70-110字：发生了什么、背景和影响，只能依据上面给的条目和公认的史实，不确定的细节、数字不要写）|||为什么值得知道（25-40字，说它和今天的联系）
 
 不要用比喻拟人排比等修辞。
+{style_rules.CHINESE_NAMES_RULE}
 """
     text = call_ai(prompt)
     out = []
@@ -167,7 +170,7 @@ def build_history(call_ai, now, slot, seen_urls=None, count=3):
             continue
         ev = events[int(num) - 1]
         out.append(f"维基百科|||{_clean(parts[1])}|||{ev['url']}|||{ev['year']}年|||{_clean(parts[2])}|||{_clean(parts[3])}")
-    return "\n".join(out[:count])
+    return style_rules.localize_cards("\n".join(out[:count]), call_ai)
 
 
 # ---------------------------------------------------------------------------
@@ -206,9 +209,11 @@ def build_style(call_ai, now, slot, seen_urls=None):
 一个今天就能做的小练习（30-50字），例如"在家里或街上找一样符合这种风格的东西并说出它哪里体现了特征"。
 
 要求：只写确凿的事实，不确定的年份、人名不要写；不要用比喻拟人排比等修辞。
+{style_rules.CHINESE_NAMES_RULE}
 """
     text = call_ai(prompt)
     s = _sections(text, ["起源", "特征", "代表", "练习"])
     if not s["特征"]:
         return ""
-    return f"维基百科|||{name}|||{link or ''}|||{s['起源']}|||{s['特征']}|||{s['代表']}|||{s['练习']}"
+    line = f"维基百科|||{name}|||{link or ''}|||{s['起源']}|||{s['特征']}|||{s['代表']}|||{s['练习']}"
+    return style_rules.localize_cards(line, call_ai)

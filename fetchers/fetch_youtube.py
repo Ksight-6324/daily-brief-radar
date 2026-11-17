@@ -17,8 +17,7 @@ import feedparser
 import requests
 
 CHANNELS = [
-    {"name": "傑克揚升", "channel_id": "UCeqz3jnJMjqkiNdq6-HPzfA"},   # @biojacknow
-    {"name": "反抗者J", "channel_id": "UC8-3ryS6R2wn4jta4JXxSWw"},     # @TopJ2099
+    # 已下架：傑克揚升（@biojacknow）、反抗者J（@TopJ2099），改用更温和的博客、文章和演讲，见 fetch_category_news.py 的“自我提升”
     {"name": "麓安先生", "channel_id": "UCeU7Vq5ds73MOJ_1lc1139A"},    # @麓安先生
 ]
 
