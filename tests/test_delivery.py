@@ -168,6 +168,17 @@ class DeliveryTest(StoreCase):
         self.assertEqual(len(queued), 1)
         self.assertIn(self.store.token(current, "confirm"), json.loads(queued[0]["payload"])["html"])
 
+    def test_confirmation_mail_is_prominent_and_mentions_spam_folder(self):
+        pending = self.store.register("fresh@example.com", [], NOW)
+        self.delivery.enqueue_confirmation(pending, NOW)
+        payload = json.loads(self.rows()[-1]["payload"])
+        self.assertIn("请点击确认", payload["subject"])
+        for part in ("html", "text"):
+            self.assertIn("垃圾邮件", payload[part])
+            self.assertIn("不是垃圾邮件", payload[part])
+            self.assertIn("确认订阅", payload[part])
+        self.assertIn("/confirm#", payload["html"])
+
     def test_unsubscribe_between_queue_and_send_skips_message(self):
         account = self.subscriber()
         self.delivery.enqueue_issue(self.issue_id, NOW)

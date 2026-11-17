@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import requests
 
-from .render import links, render_issue, render_notice
+from .render import links, render_confirmation, render_issue, render_notice
 from .store import BEIJING, EDITIONS, GRACE_DAYS, stamp, utcnow
 
 
@@ -76,13 +76,8 @@ class Delivery:
             row = conn.execute("SELECT * FROM subscribers WHERE id=?", (account["id"],)).fetchone()
             confirmation_url = f"{self.base_url}/confirm#{self.store.token(row, 'confirm')}"
             manage_url, unsubscribe_url = links(self.base_url, self.store.token(row))
-            from html import escape
-            html = (f'<h1>确认订阅 Daily Brief Radar</h1><p>北京时间每天 08:00 和 20:00 各一封。确认后开始三期免费试读，按邮件期数计算。</p>'
-                    f'<p><a href="{escape(confirmation_url)}">确认我的邮箱</a></p><p>链接两天内有效。</p>'
-                    f'<p><a href="{escape(manage_url)}">管理偏好</a> · <a href="{escape(unsubscribe_url)}">退订</a></p>')
-            text = (f"确认订阅 Daily Brief Radar，开始三期免费试读。北京时间每天 08:00 和 20:00 各一封，按邮件期数计算。\n{confirmation_url}"
-                    f"\n管理偏好 {manage_url}\n退订 {unsubscribe_url}")
-            payload = self.payload(row, "请确认你的简报订阅", html, text)
+            html, text = render_confirmation(confirmation_url, manage_url, unsubscribe_url, self.sender)
+            payload = self.payload(row, "【请点击确认】确认你的 Daily Brief Radar 订阅", html, text)
             return self.enqueue(conn, row, "confirmation", row["token_nonce"], payload, now)
 
     def enqueue_login(self, email, now=None):

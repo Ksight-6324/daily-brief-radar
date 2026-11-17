@@ -118,7 +118,8 @@ def create_app(store=None, delivery=None, payment=None):
         registered = store.register(values.email, values.preferences)
         if registered:
             delivery.enqueue_confirmation(registered)
-        return {"message": "如果该邮箱可以订阅，我们会发送确认邮件。请检查收件箱和垃圾邮件文件夹。"}
+        return {"message": "如果该邮箱可以订阅，我们会发送一封确认邮件。必须点击邮件中的“确认订阅”，并在打开的页面再点一次确认，否则不会收到简报。"
+                           "没看到邮件请查看垃圾邮件文件夹，并点“不是垃圾邮件”、把发件人加入联系人。"}
 
     @app.post("/api/login")
     def login(values: LoginRequest, request: Request):
