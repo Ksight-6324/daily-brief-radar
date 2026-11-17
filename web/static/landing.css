@@ -604,10 +604,10 @@
 
 /* No.03: an ink page. The three advantages fly in with the wheel, then slide away. */
 .three {
-  margin-inline: calc(50% - 50vw);
-  padding-inline: calc(50vw - 50%);
   background: var(--ink);
   color: var(--white);
+  box-shadow: 0 0 0 100vmax var(--ink);
+  clip-path: inset(0 -100vmax);
 }
 .three-stage {
   display: flex;
@@ -942,12 +942,11 @@
 /* ---- Finale: an ink page with a radar sweep --------------------------------------------------- */
 .page.finale {
   position: relative;
-  margin-inline: calc(50% - 50vw);
-  padding-inline: calc(50vw - 50%);
-  overflow: hidden;
   border-top: 0;
   background: var(--ink);
   color: var(--white);
+  box-shadow: 0 0 0 100vmax var(--ink);
+  clip-path: inset(0 -100vmax);
 }
 .finale > *:not(.radar) {
   position: relative;
@@ -977,9 +976,9 @@
 }
 .radar {
   position: absolute;
-  right: -14vmin;
-  bottom: -14vmin;
-  width: 78vmin;
+  right: 0;
+  bottom: 56px;
+  width: min(62vmin, 520px);
   aspect-ratio: 1;
   pointer-events: none;
 }
