@@ -104,6 +104,46 @@
   window.addEventListener("scroll", requestFrame, { passive: true });
   window.addEventListener("resize", requestFrame);
 
+  // ---- First-screen signup: carry the email to the full form, then guide the next step ----------
+  const heroForm = document.getElementById("hero-capture");
+  const mainEmail = document.getElementById("email");
+  if (heroForm && mainEmail) {
+    heroForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const heroEmail = document.getElementById("hero-email");
+      mainEmail.value = heroEmail.value.trim();
+      const target = document.getElementById("subscribe");
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      const note = document.getElementById("subscribe-feedback");
+      if (note) {
+        note.classList.remove("error");
+        note.textContent = "邮箱已填好。选几个主题（也可以不选），勾选同意后点“免费订阅”。";
+      }
+      const next = document.getElementById("consent");
+      setTimeout(() => next && next.focus({ preventScroll: true }), reduceMotion ? 0 : 700);
+    });
+    mainEmail.addEventListener("input", () => {
+      document.getElementById("hero-email").value = mainEmail.value;
+    });
+  }
+
+  // ---- Sticky signup bar (phones): shown only while no signup form or the footer is on screen -----
+  const sticky = $(".sticky-cta", landing);
+  if (sticky && "IntersectionObserver" in window) {
+    const visible = new Set();
+    const watch = [heroForm, document.getElementById("subscribe"), $(".finale", landing), $(".site-footer")].filter(Boolean);
+    const sync = () => sticky.classList.toggle("is-on", visible.size === 0 && onLanding());
+    const seen = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      sync();
+    });
+    watch.forEach((node) => seen.observe(node));
+
+  }
+
   // ---- Opening: the headline is forgotten as you scroll, the answer takes its place -------------
   const opening = $(".opening");
   const title = $(".opening-title");

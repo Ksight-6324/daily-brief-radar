@@ -324,6 +324,10 @@ input[type="checkbox"]:checked {
 .preference-options label:has(input:checked) input {
   border-color: var(--white);
 }
+/* Signup form: only the popular topics show at first; chosen ones stay visible when collapsed. */
+.preference-options[data-collapsed="true"] .topic-extra:not(:has(input:checked)) {
+  display: none !important;
+}
 .topic-tools {
   display: flex;
   align-items: center;
@@ -1034,6 +1038,57 @@ input[type="checkbox"]:checked {
 }
 
 /* Tips page: two payment codes side by side, then a ranked list of named tippers. */
+.tip-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 36px 0 12px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--ink);
+}
+.tip-steps li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 18px 20px 20px;
+  border-right: 1px solid var(--ink);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.tip-steps li:last-child {
+  border-right: 0;
+}
+.tip-steps b {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--ink);
+  font-family: var(--serif);
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+}
+.tip-steps span {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 700;
+}
+@media (max-width: 720px) {
+  .tip-steps {
+    grid-template-columns: 1fr;
+  }
+  .tip-steps li {
+    grid-template-columns: auto 1fr;
+    column-gap: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ink);
+  }
+  .tip-steps li:last-child {
+    border-bottom: 0;
+  }
+  .tip-steps b {
+    grid-row: span 2;
+    font-size: 34px;
+  }
+}
 .tip-codes {
   display: flex;
   flex-wrap: wrap;

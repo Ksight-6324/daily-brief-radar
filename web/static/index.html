@@ -53,6 +53,21 @@
               </div>
               <p class="scroll-hint" aria-hidden="true"><span>向下滚动</span><i></i></p>
             </div>
+          <form id="hero-capture" class="hero-capture" aria-label="快速订阅">
+            <div class="capture-row">
+              <label class="visually-hidden" for="hero-email">邮箱地址</label>
+              <input
+                id="hero-email"
+                type="email"
+                autocomplete="email"
+                placeholder="你的邮箱，每天早晚各一封"
+                maxlength="254"
+                required
+              />
+              <button class="button primary" type="submit">免费订阅</button>
+            </div>
+            <p class="capture-note">免费，不限量。下一步选主题并确认邮箱，随时退订。</p>
+          </form>
           </section>
 
           <section class="page page-twelve" aria-labelledby="page-twelve">
@@ -268,7 +283,8 @@
                 <div class="topic-tools">
                   <span data-topic-count role="status" aria-live="polite">正在读取主题…</span>
                   <div>
-                    <button type="button" data-topic-action="all">全选</button
+                    <button type="button" data-topic-action="more" aria-expanded="false">更多主题</button
+                    ><button type="button" data-topic-action="all">全选</button
                     ><button type="button" data-topic-action="clear">清空</button>
                   </div>
                 </div>
@@ -302,6 +318,8 @@
             <p class="page-small">每天早 8 点、晚 8 点，三分钟读完这个世界。</p>
             <a class="button primary cta finale-cta" href="#subscribe">免费订阅</a>
           </section>
+
+          <a class="sticky-cta" href="#subscribe" aria-label="免费订阅，跳到订阅表单">免费订阅</a>
         </div>
 
         <section

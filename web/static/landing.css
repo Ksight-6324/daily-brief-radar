@@ -265,6 +265,84 @@
   opacity: var(--f, 1);
 }
 
+/* ---- First-screen signup: one field, one button. It carries the email to the full form below. ----- */
+.hero-capture {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  text-align: left;
+}
+.capture-row {
+  display: flex;
+}
+.capture-row input[type="email"] {
+  flex: 1;
+  min-width: 0;
+  background: var(--white);
+}
+.capture-row .button {
+  width: auto;
+  min-width: 140px;
+  min-height: 54px;
+  margin-left: -1px;
+  padding-inline: 24px;
+  white-space: nowrap;
+}
+.capture-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+/* The form sits after the pinned stage and sticks to the bottom of the viewport while the opening is on
+   screen, so it stays in the first screen even though the stage itself starts below the page header. */
+.opening .hero-capture {
+  position: sticky;
+  bottom: 40px;
+  z-index: 2;
+  padding-block: 4px;
+}
+/* The scroll hint moves to the corner so it never competes with the form. */
+.opening.is-live .scroll-hint {
+  left: 0;
+  bottom: 120px;
+  justify-items: start;
+  transform: none;
+}
+
+/* A slim bar keeps the one action in reach on phones once the first screen is out of sight. */
+.sticky-cta {
+  display: none;
+}
+@media (max-width: 720px) {
+  .sticky-cta {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 9;
+    display: block;
+    padding: 16px 18px calc(16px + env(safe-area-inset-bottom));
+    background: var(--ink);
+    color: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-align: center;
+    text-decoration: none;
+    transform: translateY(110%);
+    transition: transform 0.5s var(--ease);
+  }
+  .sticky-cta.is-on {
+    transform: none;
+  }
+  .scroll-hint {
+    display: none;
+  }
+  .capture-row .button {
+    min-width: 112px;
+    padding-inline: 14px;
+  }
+}
+
 /* ---- Pages: a few large words, a little small text, a lot of paper ---------------------------- */
 .page {
   display: flex;

@@ -83,6 +83,21 @@ function updateTopicCount(form) {
     `已选 ${selectedPreferences(form).length} / ${total}`;
 }
 
+// The signup form leads with a few popular topics so a new reader is not asked to do homework;
+// the rest sit behind one tap, and any topic already chosen always stays visible.
+const FEATURED_TOPICS = ["markets", "ai", "jobs", "politics_mil", "growth", "sports_health"];
+
+function setTopicsExpanded(form, expanded) {
+  const grid = form.querySelector("[data-topics]");
+  grid.dataset.collapsed = String(!expanded);
+  const toggle = form.querySelector('[data-topic-action="more"]');
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", String(expanded));
+    const extra = grid.querySelectorAll(".topic-extra").length;
+    toggle.textContent = expanded ? "收起" : `更多主题 +${extra}`;
+  }
+}
+
 async function loadOptions() {
   const options = await api("/api/options");
   for (const form of [byId("subscribe-form"), byId("preferences-form")]) {
@@ -93,12 +108,19 @@ async function loadOptions() {
       checkbox.name = "preferences";
       checkbox.value = topic.id;
       label.append(checkbox, document.createTextNode(topic.label));
+      if (form.querySelector('[data-topic-action="more"]') && !FEATURED_TOPICS.includes(topic.id))
+        label.classList.add("topic-extra");
       return label;
     });
     form.querySelector("[data-topics]").replaceChildren(...labels);
     form.addEventListener("change", () => updateTopicCount(form));
+    if (form.querySelector('[data-topic-action="more"]')) setTopicsExpanded(form, false);
     for (const button of form.querySelectorAll("[data-topic-action]")) {
       button.addEventListener("click", () => {
+        if (button.dataset.topicAction === "more") {
+          setTopicsExpanded(form, form.querySelector("[data-topics]").dataset.collapsed === "true");
+          return;
+        }
         for (const checkbox of form.querySelectorAll(
           'input[name="preferences"]',
         )) {

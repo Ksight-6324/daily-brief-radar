@@ -287,12 +287,24 @@ class WebTest(StoreCase):
         self.assertNotRegex(page, r'\sstyle="', "the policy forbids style attributes")
         self.assertNotIn("新闻联播", page, "no comparative claim names a specific broadcaster")
         self.assertIn('class="clock"', page)
+        # First screen: one email field that hands over to the full form; a phone-only bar; topics lead with a few.
+        self.assertIn('id="hero-capture"', page)
+        self.assertIn('id="hero-email"', page)
+        self.assertIn('class="sticky-cta"', page)
+        self.assertIn('data-topic-action="more"', page)
+        self.assertEqual(page.count('id="email"'), 1, "the hero field must not reuse the full form's id")
         self.assertNotIn("twelve-bar", page)
         self.assertIn("script-src 'self'", self.client.get("/").headers["content-security-policy"])
         for path in ("/static/landing.css", "/static/landing.js", "/static/style.css", "/static/app.js"):
             self.assertEqual(self.client.get(path).status_code, 200, path)
             self.assertIn(f'"{path}"', page)
         self.assertNotRegex(self.client.get("/static/landing.css").text, r"url\(|@import")
+
+    def test_support_page_explains_what_happens_after_a_tip(self):
+        page = self.client.get("/support").text
+        self.assertIn('class="tip-steps"', page)
+        for fact in ("扫码", "备注昵称", "手动上榜", "不影响订阅和阅读", "系统收不到到账通知"):
+            self.assertIn(fact, page)
 
     def test_contact_details_come_from_configuration_and_bad_addresses_are_dropped(self):
         from unittest.mock import patch
