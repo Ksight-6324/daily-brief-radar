@@ -179,6 +179,19 @@ class Store:
                 ORDER BY issue_date DESC, CASE edition WHEN 'evening' THEN 1 ELSE 0 END DESC LIMIT ?""", (limit,)).fetchall()
             return [dict(row) for row in rows]
 
+    def archive_issues(self):
+        """Every morning and evening snapshot, newest first. The archive hides issues not yet sent."""
+        with self.connect() as conn:
+            rows = conn.execute("""SELECT issue_date,edition,sections FROM daily_issue
+                WHERE edition IN ('morning','evening')
+                ORDER BY issue_date DESC, CASE edition WHEN 'evening' THEN 1 ELSE 0 END DESC""").fetchall()
+            return [dict(row) for row in rows]
+
+    def issue_count(self):
+        """Snapshots are only ever inserted, so the count tells a cache whether anything changed."""
+        with self.connect() as conn:
+            return conn.execute("SELECT count(*) FROM daily_issue").fetchone()[0]
+
     def register(self, email, selected, now=None):
         now = now or utcnow()
         email = normalize_email(email)

@@ -11,7 +11,7 @@ import qrcode.image.svg
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictBool
 
@@ -19,6 +19,7 @@ from subscription.delivery import ACCOUNT_QUERY, Delivery, eligibility, free_acc
 from subscription.feed import build_feed
 from subscription.payments import Alipay
 from subscription.store import PLAN_LABELS, PLANS, SECTIONS, Store, normalize_email, stamp, utcnow
+from web import archive as archive_pages
 
 
 STATIC = Path(__file__).with_name("static")
@@ -58,6 +59,7 @@ def create_app(store=None, delivery=None, payment=None):
     payment = payment or Alipay(store)
     app = FastAPI(title="Daily Brief Radar", docs_url=None, redoc_url=None)
     app.state.store = store
+    archive = archive_pages.Archive(store)
 
     @app.middleware("http")
     async def response_headers(request, call_next):
@@ -285,6 +287,18 @@ def create_app(store=None, delivery=None, payment=None):
     @app.get("/support")
     def support():
         return FileResponse(STATIC / "support.html")
+
+    @app.get("/archive", response_class=HTMLResponse)
+    def archive_index(q: str = "", topic: str = "", page: str = "1"):
+        # Public and read-only: only issues whose send time has passed, without any reader data.
+        return archive_pages.index_page(archive.issues(), q[:200], topic[:40], archive_pages.page_number(page))
+
+    @app.get("/archive/{issue_date}/{edition}", response_class=HTMLResponse)
+    def archive_issue(issue_date: str, edition: str):
+        found = archive.find(issue_date, edition)
+        if found is None:
+            return HTMLResponse(archive_pages.missing_page(), status_code=404)
+        return archive_pages.issue_page(*found)
 
     @app.get("/")
     @app.get("/confirm")

@@ -1161,3 +1161,179 @@ input[type="checkbox"]:checked {
     flex: 1 1 200px;
   }
 }
+
+/* Public archive: browse past issues and search stories */
+select {
+  font: inherit;
+}
+.archive {
+  max-width: 860px;
+  margin: 56px auto 90px;
+}
+.archive h1 {
+  font-size: 42px;
+  line-height: 1.25;
+  letter-spacing: -1.5px;
+  margin: 14px 0 12px;
+}
+.archive .panel-context a {
+  text-decoration: none;
+}
+.archive-lead {
+  color: var(--ink-2);
+  margin-bottom: 24px;
+}
+.archive-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0;
+  border: 1px solid var(--ink);
+  background: var(--white);
+  margin-bottom: 28px;
+}
+.archive-search input,
+.archive-search select {
+  min-height: 52px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  padding: 10px 16px;
+}
+.archive-search select {
+  border-left: 1px solid var(--ink);
+  max-width: 160px;
+}
+.archive-search .button {
+  width: auto;
+  border-width: 0 0 0 1px;
+}
+.archive-count {
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+.archive .story h3 {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+.archive .story {
+  scroll-margin-top: 24px;
+}
+.archive .story:target {
+  border-left: 3px solid var(--ink);
+}
+.archive-hit-meta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.archive-hit-meta a {
+  color: inherit;
+}
+.archive mark {
+  background: var(--wash-2);
+  color: inherit;
+  padding: 0 2px;
+}
+.archive-issue {
+  border-top: 1px solid var(--ink);
+  padding: 20px 0 24px;
+}
+.archive-issue h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+.archive-issue h2 a {
+  text-decoration: none;
+}
+.archive-issue h2 a:hover {
+  text-decoration: underline;
+}
+.archive-issue ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.archive-issue li {
+  margin-bottom: 8px;
+}
+.archive-issue .topic-label {
+  margin: 0 10px 0 0;
+}
+.archive-more {
+  font-size: 14px;
+  font-weight: 600;
+}
+.archive-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid var(--ink);
+  padding-top: 16px;
+  margin-top: 24px;
+  font-size: 14px;
+}
+.archive-pager a {
+  font-weight: 600;
+}
+.archive-subscribe {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--white);
+  border: 1px solid var(--ink);
+  padding: 20px 24px;
+  margin-top: 40px;
+}
+.archive-subscribe p {
+  margin: 0;
+  font-weight: 600;
+}
+.archive-subscribe .button {
+  width: auto;
+  flex: none;
+}
+@media (max-width: 720px) {
+  .archive {
+    margin: 40px auto 64px;
+  }
+  .archive h1 {
+    font-size: 32px;
+  }
+  .archive-search {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .archive-search input {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--ink);
+  }
+  .archive-search select {
+    border-left: 0;
+    max-width: none;
+  }
+  .archive-pager {
+    flex-wrap: wrap;
+  }
+  .archive-subscribe {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .archive-subscribe .button {
+    width: 100%;
+  }
+}
+/* Narrow phones: the nav moves under the wordmark instead of running off the screen. */
+@media (max-width: 480px) {
+  .site-header {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+}
