@@ -15,7 +15,8 @@ def card(title, summary="摘要"):
     return f"来源|||{title}|||https://example.com/a|||标签|||{summary}|||影响"
 
 
-SECTIONS = {"ai": card("国产芯片取得突破"), "jobs": card("初级程序员岗位减少"), "markets": card("科技股走强")}
+SECTIONS = {"ai": card("国产芯片取得突破"), "jobs": card("初级程序员岗位减少"), "markets": card("科技股走强"),
+            "gaming": card("国产游戏获提名")}
 GOOD = "【人工智能】的芯片突破可能让更多工作交给机器，【就业机会】里的初级程序员岗位或许会继续收紧。"
 
 
@@ -33,8 +34,11 @@ class InsightWritingTest(StoreCase):
 
     def test_answers_that_break_the_rules_are_retried_once_then_dropped(self):
         bad = ["无", "【人工智能】很重要，影响深远，值得长期关注和持续观察。",
-               "【人工智能】与【电竞游戏】可能互相影响，这两个领域都在快速变化当中。",
-               "【人工智能】与【就业机会】" + "很长" * 120]
+               "【人工智能】与【时尚穿搭】可能互相影响，这两个领域都在快速变化当中。",
+               "【人工智能】与【就业机会】" + "很长" * 120,
+               # Real answer from 2026-11-17: it explains that there is no link instead of answering 无.
+               "【人工智能】的新闻引人关注，但与【股票经济】、【就业机会】之间没有直接关联，因此无法建立站得住脚的联系。",
+               "【人工智能】进步可能影响【就业机会】，也可能带动【股票经济】，甚至波及【电竞游戏】的制作方式。"]
         for answer in bad:
             calls = []
             self.assertIsNone(insight.write_insight(SECTIONS, lambda prompt: calls.append(1) or answer), answer)

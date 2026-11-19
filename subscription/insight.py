@@ -13,6 +13,10 @@ from .store import SECTIONS
 
 
 MIN_TOPICS = 3
+MAX_LINKED = 3
+# A model that finds no link sometimes explains that in a sentence instead of answering 无.
+NO_LINK_PHRASES = ("无法建立", "没有直接关联", "没有直接联系", "无直接关联", "并无关联", "没有关联", "没有联系",
+                   "没有明显", "找不到", "难以建立", "关联不大")
 MAX_LENGTH = 200
 TOPIC_MARK = re.compile(r"【([^【】]{1,8})】")
 LABEL_KEYS = {label: key for key, label in SECTIONS.items()}
@@ -37,15 +41,17 @@ def build_prompt(items, rules=""):
     return (
         "你是一份中文每日新闻简报的主编。下面是本期各主题的新闻，每行一条，格式为【主题】标题：摘要。\n\n"
         f"{lines}\n\n"
-        "请写一句“一句话洞察”：从中找出两到四个不同主题的新闻之间真实存在的联系，说清一件事可能怎样影响另一件事，"
+        "请写一句“一句话洞察”：从中找出两到三个不同主题的新闻之间真实存在的联系，说清一件事可能怎样影响另一件事，"
         "让读者看到新闻背后的关联，而不是把新闻再罗列一遍。\n"
         "要求：\n"
         f"1. 只写一句话，60 到 150 个汉字，不超过 {MAX_LENGTH} 字。\n"
-        "2. 每提到一个主题，用【主题名】标出，主题名必须与上面列表中的完全一致，至少涉及两个不同主题。\n"
+        "2. 每提到一个主题，用【主题名】标出，主题名必须与上面列表中的完全一致。只连两个或三个主题，优先两个，"
+        "不要为了多提主题而硬加。\n"
         "3. 只依据上面提供的新闻，不要补充材料里没有的事实、数字、公司、人物或股价变化。推测的影响用“可能”“或许”等措辞。"
         "只说明新闻之间的关联，不要对读者提建议、说教或号召读者做什么。\n"
         f"4. {rules}\n"
-        "5. 联系必须直接、普通人一看就信，宁缺毋滥。如果这些新闻之间找不到站得住脚的联系，只输出一个字：无。\n"
+        "5. 联系必须直接、普通人一看就信，宁缺毋滥。如果这些新闻之间找不到站得住脚的联系，只输出一个字：无。"
+        "不要写“没有联系”“无法建立联系”之类的说明句。\n"
         "6. 只输出这句话本身，不要标题、引号、序号或解释。"
     )
 
@@ -55,14 +61,16 @@ def validate(text, items):
     sentence = " ".join((text or "").split()).strip("“”\"'「」 ")
     if not sentence or sentence in ("无", "无。") or len(sentence) > MAX_LENGTH or len(sentence) < 20:
         return None
-    available = {label for _, label, _, _ in items}
+    if any(phrase in sentence for phrase in NO_LINK_PHRASES):
+        return None
+    available ={label for _, label, _, _ in items}
     keys = []
     for label in TOPIC_MARK.findall(sentence):
         if label not in available:
             return None
         if LABEL_KEYS[label] not in keys:
             keys.append(LABEL_KEYS[label])
-    return (sentence, keys) if len(keys) >= 2 else None
+    return (sentence, keys) if 2 <= len(keys) <= MAX_LINKED else None
 
 
 def write_insight(sections, call, rules="", attempts=2):
