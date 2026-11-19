@@ -127,4 +127,21 @@ CREATE TABLE IF NOT EXISTS tips (
 );
 CREATE INDEX IF NOT EXISTS tips_name ON tips(name);
 
+-- One AI-written sentence per issue that links stories from different topics. It is written once the
+-- issue is frozen and is never rewritten, like the issue itself. topics lists the linked section keys.
+CREATE TABLE IF NOT EXISTS issue_insight (
+    issue_id TEXT PRIMARY KEY REFERENCES daily_issue(id),
+    body TEXT NOT NULL CHECK (length(body) BETWEEN 1 AND 300),
+    topics TEXT NOT NULL,
+    generated_at TEXT NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS issue_insight_immutable_update
+BEFORE UPDATE ON issue_insight
+BEGIN SELECT RAISE(ABORT, 'published insights are immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS issue_insight_immutable_delete
+BEFORE DELETE ON issue_insight
+BEGIN SELECT RAISE(ABORT, 'published insights are immutable'); END;
+
 PRAGMA user_version = 3;

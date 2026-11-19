@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from .delivery import Delivery
 from .dnscheck import check_domain, domain_of
 from .maintenance import backup_store, health, prune_logs
+from .insight import ensure_insight
 from .pipeline import freeze_markdown, generate_markdown
 from .store import BEIJING, EDITIONS, TIP_CHANNELS, Store, edition_for, utcnow
 
@@ -62,6 +63,8 @@ def main():
     tip_remove.add_argument("--id", type=int)
     tip_remove.add_argument("--name")
     commands.add_parser("publish")
+    insight = commands.add_parser("insight", help="write the cross-topic insight for a frozen issue")
+    insight.add_argument("--date", help="Beijing issue date, default today")
     commands.add_parser("generate")
     scheduler = commands.add_parser("schedule")
     scheduler.add_argument("--watch", action="store_true")
@@ -99,6 +102,19 @@ def main():
             issue_id = freeze_markdown(store, text, now, edition=edition)
         queued = delivery.enqueue_issue(issue_id, now) if args.command == "publish" else 0
         print(json.dumps({"issue_id": issue_id, "queued": queued}))
+        if args.command == "publish":
+            # The insight is extra: mail is already queued, and a model failure must not stop the issue.
+            try:
+                written = ensure_insight(store, issue_id, now=now)
+                print(json.dumps({"insight": bool(written)}))
+            except Exception as error:
+                print("Insight skipped: " + type(error).__name__, flush=True)
+    elif args.command == "insight":
+        issue = store.issue(args.date or now.astimezone(BEIJING).date().isoformat(), edition)
+        if issue is None:
+            raise SystemExit("No frozen issue for that date and edition")
+        written = ensure_insight(store, issue["id"], now=now)
+        print(json.dumps({"insight": written["body"] if written else None}, ensure_ascii=False))
     elif args.command == "scan":
         issue = store.issue(now.astimezone(BEIJING).date().isoformat(), edition)
         count = delivery.enqueue_issue(issue["id"], now) if issue else 0

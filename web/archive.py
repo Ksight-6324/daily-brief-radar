@@ -3,12 +3,14 @@
 Pages are rendered on the server so they work without JavaScript and every issue has a stable link.
 Only issues whose send time has passed are shown, so a frozen snapshot never leaks before its mail."""
 
+import json
 import re
 from datetime import date, datetime
 from html import escape
 from urllib.parse import urlencode
 
 from subscription.feed import build_feed
+from subscription.insight import LABEL_KEYS, TOPIC_MARK
 from subscription.store import BEIJING, EDITIONS, SECTIONS, utcnow
 
 
@@ -17,6 +19,7 @@ RESULTS_PER_PAGE = 30
 MAX_QUERY = 40
 MAX_TERMS = 5
 PREVIEW_STORIES = 3
+INSIGHTS_PER_PAGE = 20
 WEEKDAYS = "一二三四五六日"
 SEARCH_FIELDS = ("label", "title", "summary", "importance", "tags", "source")
 
@@ -78,11 +81,16 @@ class Archive:
 
     def issues(self, now=None):
         """Sent issues, newest first. Snapshots are immutable, so the parsed copy only changes when one is added."""
-        count = self.store.issue_count()
-        cached_count, parsed = self.cache
-        if count != cached_count:
-            parsed = build_feed(self.store.archive_issues(), [], "all")
-            self.cache = (count, parsed)
+        version = self.store.archive_version()
+        cached_version, parsed = self.cache
+        if version != cached_version:
+            parsed = []
+            for row in self.store.archive_issues():
+                for issue in build_feed([row], [], "all"):
+                    issue["insight"] = row["insight"]
+                    issue["insight_topics"] = json.loads(row["insight_topics"]) if row["insight_topics"] else []
+                    parsed.append(issue)
+            self.cache = (version, parsed)
         now = now or utcnow()
         return [issue for issue in parsed if sent_at(issue["date"], issue["edition"]) <= now]
 
@@ -200,6 +208,7 @@ def issue_page(issue, newer, older):
     body = ['<article class="archive">', '<p class="panel-context"><a href="/archive">往期简报</a></p>',
             f'<h1>{escape(heading)}</h1>',
             f'<p class="archive-lead">本期共 {len(issue["stories"])} 条，按主题排列。AI 辅助摘要，请以原始来源为准。</p>',
+            insight_block(issue, heading="本期一句话洞察"),
             *[story_card(story) for story in issue["stories"]],
             f'<nav class="archive-pager" aria-label="相邻期号">{"".join(neighbours)}</nav>',
             subscribe_note(), "</article>"]
@@ -219,7 +228,11 @@ def subscribe_note():
             '<a class="button primary" href="/#subscribe">免费订阅</a></aside>')
 
 
-def layout(title, description, body):
+def layout(title, description, body, current="/archive"):
+    marker = ' aria-current="page"'
+    nav = "".join(
+        f'<a href="{href}"{marker if href == current else ""}>{label}</a>'
+        for href, label in (("/#subscribe", "免费订阅"), ("/archive", "往期"), ("/insight", "一句话洞察"), ("/manage", "我的主页")))
     return f"""<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -236,13 +249,13 @@ def layout(title, description, body):
     <div class="site-shell">
       <header class="site-header">
         <a class="wordmark" href="/" aria-label="Daily Brief Radar 首页"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>DAILY BRIEF RADAR</a>
-        <nav aria-label="主导航"><a href="/#subscribe">免费订阅</a><a href="/archive" aria-current="page">往期</a><a href="/manage">我的主页</a></nav>
+        <nav aria-label="主导航">{nav}</nav>
       </header>
       <main id="main">{body}</main>
       <footer class="site-footer">
         <div class="foot-top">
           <span class="foot-brand">DAILY BRIEF RADAR</span>
-          <div class="foot-links"><a href="/archive">往期简报</a><a href="/support">打赏</a><a href="/privacy">隐私政策</a><a href="/terms">服务条款</a></div>
+          <div class="foot-links"><a href="/archive">往期简报</a><a href="/insight">一句话洞察</a><a href="/support">打赏</a><a href="/privacy">隐私政策</a><a href="/terms">服务条款</a></div>
         </div>
         <div class="foot-bottom">
           <p>免费订阅 · 主动确认 · 随时退订</p>
@@ -253,3 +266,63 @@ def layout(title, description, body):
   </body>
 </html>
 """
+
+
+def insight_sentence(issue):
+    """The sentence with each 【主题】 linked to that topic's story in the issue."""
+    parts, last = [], 0
+    present = {story["topic"] for story in issue["stories"]}
+    for found in TOPIC_MARK.finditer(issue["insight"]):
+        parts.append(escape(issue["insight"][last:found.start()]))
+        key = LABEL_KEYS.get(found.group(1))
+        if key in present:
+            parts.append(f'<a href="{escape(issue_path(issue))}#{key}">【{escape(found.group(1))}】</a>')
+        else:
+            parts.append(escape(found.group()))
+        last = found.end()
+    parts.append(escape(issue["insight"][last:]))
+    return "".join(parts)
+
+
+def insight_block(issue, heading="一句话洞察"):
+    if not issue.get("insight"):
+        return ""
+    return (f'<aside class="insight-block"><p class="insight-kicker">{escape(heading)}</p>'
+            f'<p class="insight-sentence">{insight_sentence(issue)}</p>'
+            '<p class="insight-note">AI 根据本期新闻写出的跨主题联想，只是可能的关联，不构成任何投资或职业建议。</p></aside>')
+
+
+def insight_page(issues, page=1):
+    with_insight = [issue for issue in issues if issue.get("insight")]
+    body = ['<article class="archive">', '<p class="panel-context">一句话洞察</p>',
+            '<h1>新闻不缺，缺的是新闻之间的联系。</h1>',
+            '<p class="archive-lead">每期简报冻结后，AI 读完全部主题的新闻，把不同主题之间的联系写成一句话：'
+            '一件事可能怎样牵动另一件事。点【主题】可以跳到对应的那条新闻。</p>']
+    if not with_insight:
+        body.append('<p class="form-note">第一句洞察会随下一期简报一起发布。</p>')
+    else:
+        pages = max(1, -(-(len(with_insight) - 1) // INSIGHTS_PER_PAGE))
+        page = min(page, pages)
+        if page == 1:
+            latest = with_insight[0]
+            body.append(f'<section class="insight-latest"><h2><a href="{escape(issue_path(latest))}">{escape(issue_heading(latest))}</a></h2>')
+            body.append(insight_block(latest, heading="最新一期"))
+            linked = [story for key in latest["insight_topics"] for story in latest["stories"] if story["topic"] == key]
+            if linked:
+                body.append('<h3 class="insight-linked">这句话串起的新闻</h3>')
+                body += [story_card(story) for story in linked]
+            body.append(f'<a class="archive-more" href="{escape(issue_path(latest))}">看本期全部 {len(latest["stories"])} 条新闻 →</a></section>')
+        start = 1 + (page - 1) * INSIGHTS_PER_PAGE
+        older = with_insight[start:start + INSIGHTS_PER_PAGE]
+        if older:
+            body.append('<h2 class="insight-history-title">往期洞察</h2><ol class="insight-history">')
+            body += [f'<li><a class="insight-date" href="{escape(issue_path(issue))}">{escape(issue_heading(issue))}</a>'
+                     f'<p>{insight_sentence(issue)}</p></li>' for issue in older]
+            body.append("</ol>")
+        if pages > 1:
+            newer = f'<a href="/insight{"?page=" + str(page - 1) if page > 2 else ""}" rel="prev">← 较新</a>' if page > 1 else "<span></span>"
+            later = f'<a href="/insight?page={page + 1}" rel="next">较早 →</a>' if page < pages else "<span></span>"
+            body.append(f'<nav class="archive-pager" aria-label="翻页">{newer}<span>第 {page} / {pages} 页</span>{later}</nav>')
+    body += [subscribe_note(), "</article>"]
+    return layout("一句话洞察", "Daily Brief Radar 一句话洞察：AI 把每期简报里不同主题的新闻串成一句话，看见新闻背后的联系。",
+                  "".join(body), current="/insight")

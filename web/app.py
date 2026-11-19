@@ -293,6 +293,10 @@ def create_app(store=None, delivery=None, payment=None):
         # Public and read-only: only issues whose send time has passed, without any reader data.
         return archive_pages.index_page(archive.issues(), q[:200], topic[:40], archive_pages.page_number(page))
 
+    @app.get("/insight", response_class=HTMLResponse)
+    def insight_index(page: str = "1"):
+        return archive_pages.insight_page(archive.issues(), archive_pages.page_number(page))
+
     @app.get("/archive/{issue_date}/{edition}", response_class=HTMLResponse)
     def archive_issue(issue_date: str, edition: str):
         found = archive.find(issue_date, edition)

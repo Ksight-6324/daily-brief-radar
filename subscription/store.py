@@ -180,17 +180,35 @@ class Store:
             return [dict(row) for row in rows]
 
     def archive_issues(self):
-        """Every morning and evening snapshot, newest first. The archive hides issues not yet sent."""
+        """Every morning and evening snapshot with its insight, newest first. The archive hides issues not yet sent."""
         with self.connect() as conn:
-            rows = conn.execute("""SELECT issue_date,edition,sections FROM daily_issue
-                WHERE edition IN ('morning','evening')
-                ORDER BY issue_date DESC, CASE edition WHEN 'evening' THEN 1 ELSE 0 END DESC""").fetchall()
+            rows = conn.execute("""SELECT d.issue_date,d.edition,d.sections,i.body AS insight,i.topics AS insight_topics
+                FROM daily_issue d LEFT JOIN issue_insight i ON i.issue_id=d.id
+                WHERE d.edition IN ('morning','evening')
+                ORDER BY d.issue_date DESC, CASE d.edition WHEN 'evening' THEN 1 ELSE 0 END DESC""").fetchall()
             return [dict(row) for row in rows]
 
-    def issue_count(self):
-        """Snapshots are only ever inserted, so the count tells a cache whether anything changed."""
+    def archive_version(self):
+        """Snapshots and insights are only ever inserted, so their counts tell a cache whether anything changed."""
         with self.connect() as conn:
-            return conn.execute("SELECT count(*) FROM daily_issue").fetchone()[0]
+            return conn.execute("""SELECT (SELECT count(*) FROM daily_issue),
+                                          (SELECT count(*) FROM issue_insight)""").fetchone()[:]
+
+    def insight(self, issue_id):
+        with self.connect() as conn:
+            row = conn.execute("SELECT * FROM issue_insight WHERE issue_id=?", (issue_id,)).fetchone()
+            return dict(row) if row else None
+
+    def save_insight(self, issue_id, body, topics, now=None):
+        """Store an issue's insight once. A second call keeps the first sentence and returns False."""
+        if not body or len(body) > 300 or len(set(topics)) < 2 or not set(topics).issubset(SECTIONS):
+            raise ValueError("洞察必须是一句话并关联至少两个主题")
+        with self.transaction() as conn:
+            if not conn.execute("SELECT 1 FROM daily_issue WHERE id=?", (issue_id,)).fetchone():
+                raise ValueError("内容快照不存在")
+            cursor = conn.execute("""INSERT INTO issue_insight(issue_id,body,topics,generated_at) VALUES(?,?,?,?)
+                ON CONFLICT(issue_id) DO NOTHING""", (issue_id, body, json.dumps(topics), stamp(now or utcnow())))
+            return cursor.rowcount == 1
 
     def register(self, email, selected, now=None):
         now = now or utcnow()
