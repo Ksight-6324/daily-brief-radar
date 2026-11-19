@@ -300,6 +300,15 @@ class WebTest(StoreCase):
             self.assertIn(f'"{path}"', page)
         self.assertNotRegex(self.client.get("/static/landing.css").text, r"url\(|@import")
 
+    def test_favicon_is_the_single_colour_radar_mark(self):
+        response = self.client.get("/static/favicon.svg")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("svg", response.headers["content-type"])
+        svg = response.text.lower()
+        self.assertIn("prefers-color-scheme:dark", svg, "the mark must follow the browser's dark mode")
+        for old in ("#d8342b", "#1d4e9e", "#f7b500"):
+            self.assertNotIn(old, svg, "the old red, blue and yellow shapes are gone")
+
     def test_support_page_explains_what_happens_after_a_tip(self):
         page = self.client.get("/support").text
         self.assertIn('class="tip-steps"', page)
